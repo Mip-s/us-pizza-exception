@@ -1,0 +1,29 @@
+// Exception Agent — Cloudflare Worker: daily sales exceptions board (mounted in the hub at /exception).
+// Data lives in Supabase schema exception_agent (sales uploaded through the board); expectations from Chronos-2 on Modal.
+//
+// Secrets (Worker → Settings → Variables and Secrets, type Secret):
+//   SUPABASE_SERVICE_ROLE_KEY  – read / write exception_agent, read managers
+//   VAPID_PRIVATE_KEY          – same private key as the other modules (without it: no push, the rest works)
+//   EXCEPTION_API_KEY          – same value as the Modal secret exception-api-key
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "us-pizza-exception",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-01",
+  "build": { "command": "npm run build" },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": true
+  },
+  "vars": {
+    "SUPABASE_URL": "https://yqigynppqmhmsohwrdof.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_uYlMQegmT74Y3IgEf8E7wg_pA2fPBjq",
+    "VAPID_PUBLIC_KEY": "BGLP1a0KXimha7M4046OLzimiAVw5rmFca8RGz__XPy-MCaUCQnXhbJ6ep7Mdr2TWESXuezQhndQB_qdyXQdgG0",
+    "VAPID_SUBJECT": "mailto:admin@uspizza.com",
+    // Chronos-2 on Modal (D:\USPIZZA\Exception\modal_app.py, endpoint "expect")
+    "MODAL_URL": "https://mip-s--exception-forecast-forecaster-expect.us-east.modal.run"
+  },
+  "observability": { "enabled": true }
+}

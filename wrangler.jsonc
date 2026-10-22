@@ -25,5 +25,11 @@
     // Chronos-2 on Modal (D:\USPIZZA\Exception\modal_app.py, endpoint "expect")
     "MODAL_URL": "https://mip-s--exception-forecast-forecaster-expect.us-east.modal.run"
   },
+  // Workers AI: "possible causes" for each exception (worker/causes.js)
+  "ai": { "binding": "AI" },
+  // the Uptime Monitor's D1 (read only): POS / KDS downtime on the flagged day
+  "d1_databases": [
+    { "binding": "UPTIME_DB", "database_name": "us-pizza-monitoring", "database_id": "2d96bd1e-fb42-4209-aff8-9ce8de35ffec" }
+  ],
   "observability": { "enabled": true }
 }

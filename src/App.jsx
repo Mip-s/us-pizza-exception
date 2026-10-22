@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PagedSection } from './Paged.jsx';
 import { supabase, HUB_URL, signOutHere } from './supabase.js';
 import { usePush, useUpdateCheck, usePullToRefresh, PULL_THRESHOLD } from './hooks.js';
-import { loadAll, updateException, ROLES } from './data.js';
+import { loadAll, updateException, explainOne, ROLES } from './data.js';
 import LangSelect from './LangSelect.jsx';
 import Upload from './Upload.jsx';
 import Trends from './Trends.jsx';
+import Promotions from './Promotions.jsx';
 import { t, useLang, locale, syncLangFromProfile, LANGUAGE_NAMES } from './i18n.js';
 
 const REFRESH_MS = 2 * 60 * 1000;
@@ -23,6 +24,7 @@ const KIND = {
   discount_spike: 'Discounts far above usual', void_spike: 'Voids far above usual',
 };
 const SALES_KINDS = ['sales_drop', 'no_sales'];
+const LIKELY = { high: 'Likely', medium: 'Possible', low: 'Less likely' };
 const CRIT_RM = 500; // RM at stake from which an exception shows red (worker/rules.js)
 const STATUS = { open: 'Open', acknowledged: 'Looking into it', resolved: 'Resolved' };
 
@@ -131,6 +133,15 @@ export default function App() {
     requestAnimationFrame(() => document.getElementById('trends')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   };
 
+  const explain = async (id) => {
+    try {
+      await explainOne(id);
+      await load();
+    } catch (err) {
+      setFlash(t("Couldn't work out causes: {error}", { error: err.message }));
+    }
+  };
+
   const act = async (e, status, note) => {
     try {
       await updateException(e.id, status, note);
@@ -229,16 +240,18 @@ export default function App() {
 
           <PagedSection id="exc-open" anchor="needs-attention" title={t('Needs attention')} items={open}
             empty={<p className="muted">{t('Nothing flagged on the days uploaded.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} />)}</ul>}
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} onExplain={explain} />)}</ul>}
           </PagedSection>
 
           <Trends outlets={data.outlets} outletId={trendId} onPick={setTrendOutlet} />
+
+          <Promotions promotions={data.promotions || []} regions={regions} isOps={data.is_ops} onChanged={async (msg) => { setFlash(msg); await load(); }} />
 
           {data.is_ops && <Upload outlets={data.outlets} onImported={async (msg) => { setFlash(msg); await load(); }} />}
 
           <PagedSection id="exc-resolved" title={t('Resolved')} items={resolved} defaultOpen={false} showCount={false}
             empty={<p className="muted">{t('No resolved exceptions in this period.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} />)}</ul>}
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} onExplain={explain} />)}</ul>}
           </PagedSection>
 
           <p className="muted small rules-note">
@@ -251,8 +264,9 @@ export default function App() {
   );
 }
 
-function ExceptionCard({ e, o, sales, voids, onAct, onTrend }) {
+function ExceptionCard({ e, o, sales, voids, onAct, onTrend, onExplain }) {
   const [note, setNote] = useState('');
+  const [explaining, setExplaining] = useState(false);
   const isSales = SALES_KINDS.includes(e.kind);
   const crit = isSales ? e.kind === 'no_sales' || e.pct_of_expected < 30 : Number(e.impact) >= CRIT_RM;
   const badge = e.kind === 'no_sales' ? t('No sales')
@@ -293,6 +307,26 @@ function ExceptionCard({ e, o, sales, voids, onAct, onTrend }) {
         </div>
         <Spark series={series} day={e.business_date} level={level} label={t(e.kind === 'discount_spike' ? 'Discount %, last 28 days' : e.kind === 'void_spike' ? 'Voids, last 28 days' : 'Sales, last 28 days')} />
       </div>
+      {e.causes?.length ? (
+        <div className="causes">
+          <div className="causes-head small">{e.causes[0].source === 'rules' ? t('Possible causes (simple rules — the AI was not available)') : t('Possible causes (AI, from the day\'s facts)')}</div>
+          <ol>
+            {e.causes.map((c, i) => (
+              <li key={i}>
+                <span className={`lk lk-${c.likelihood}`}>{t(LIKELY[c.likelihood] || 'Low')}</span> <strong>{c.cause}</strong>
+                {c.evidence && <div className="small muted">{c.evidence}</div>}
+                {c.check && <div className="small causes-check">{t('Check:')} {c.check}</div>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : (
+        <div className="causes causes-empty small">
+          <button type="button" className="link-btn" disabled={explaining} onClick={async () => { setExplaining(true); await onExplain(e.id); setExplaining(false); }}>
+            {explaining ? t('Working out possible causes…') : t('🤖 Why? Work out possible causes')}
+          </button>
+        </div>
+      )}
       {e.note && <pre className="exc-note small">{e.note}</pre>}
       <div className="exc-actions">
         <input type="text" placeholder={t('Note (what happened?)')} value={note} onChange={(ev) => setNote(ev.target.value)} maxLength={500} />

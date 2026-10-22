@@ -335,3 +335,26 @@ html, body { overscroll-behavior-y: contain; }
 .trend-tip-row em { color: var(--muted); font-style: normal; }
 .trend-tip-flag { color: var(--st-crit); font-weight: 700; margin-top: 4px; }
 .exc-trend-btn { margin-left: auto; }
+
+/* possible causes (AI) on each exception */
+.causes { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.causes-head { font-weight: 800; color: var(--blue); margin-bottom: 4px; }
+.causes ol { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+.causes-check { color: var(--ink); }
+.causes-empty { border-top: 1px dashed var(--line); }
+.lk { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.lk-high { color: #fff; background: var(--blue); }
+.lk-medium { color: var(--blue); background: var(--blue-light); }
+.lk-low { color: var(--muted); background: #f1f3f8; }
+
+/* promotions calendar */
+.promo-form { display: grid; gap: 8px; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.promo-form input[type="text"], .promo-form select, .promo-form input[type="date"] { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.promo-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.promo-regions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.promo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.promo-list li { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; }
+.promo-list li.is-past { opacity: .6; }
+.promo-list li.is-live { border-color: #9fb3e6; }
+.promo-src { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 7px; background: var(--blue-light); color: var(--blue); }
+.promo-src.promo-competitor { background: #fdecea; color: #b3261e; }

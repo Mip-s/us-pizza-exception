@@ -16,7 +16,7 @@ const BUDGET = 40; // requests this run may spend on pushes (cap is 50; the rest
 export async function runNotify(env) {
   const db = sb(env);
   const pub = sbPublic(env);
-  const pending = await db.get('exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,pct_of_expected,value,usual,impact,bills&notified_at=is.null&status=eq.open&order=impact.desc.nullslast');
+  const pending = await db.get('exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,pct_of_expected,value,usual,impact,bills,cause_tag&notified_at=is.null&status=eq.open&order=impact.desc.nullslast');
   if (!pending.length) return { people: 0, delivered: 0, skipped: 0 };
 
   const ids = [...new Set(pending.map((e) => e.outlet_id))].join(',');

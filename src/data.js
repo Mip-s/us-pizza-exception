@@ -21,6 +21,7 @@ async function call(path, payload, method = payload ? 'POST' : 'GET') {
 }
 
 export const loadAll = (days = 35) => call(`data?days=${days}`);
+export const loadOutlet = (id, days = 90) => call(`outlet?id=${encodeURIComponent(id)}&days=${days}`);
 export const importSales = (payload) => call('import', payload);
 export const updateException = (id, status, note) => call(`exceptions/${id}`, { status, note });
 export const linkName = (name, outletId) => call('alias', { name, outlet_id: outletId });

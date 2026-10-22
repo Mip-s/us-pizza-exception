@@ -49,3 +49,30 @@ export async function handleUpdate(request, env, who, id) {
   await db.patch(`exceptions?id=eq.${id}`, patch);
   return json({ ok: true });
 }
+
+// GET /api/outlet?id=<outlet_id>&days=90 — one outlet's daily sales, discounts and voids for the trends graph:
+// the last `days` days plus the 28 before them (for the trailing average), the days a voids export covered (other
+// days have no void data, not "no voids"), and its exceptions in that period.
+export async function handleOutlet(request, env, who) {
+  const q = new URL(request.url).searchParams;
+  const id = q.get('id') || '';
+  const outlet = who.outlets.find((o) => o.outlet_id === id);
+  if (!outlet) return json({ error: 'not found' }, 404);
+  const days = Math.min(Math.max(Number(q.get('days')) || 90, 14), 365);
+  const to = todayMYT();
+  const from = addDays(to, -(days + 28));
+  const db = sb(env);
+  const range = `business_date=gte.${from}&business_date=lte.${to}`;
+  const [sales, voids, batches, exceptions] = await Promise.all([
+    db.all(`daily_sales?select=business_date,net,gross,discount,bills&outlet_id=eq.${id}&${range}&order=business_date`),
+    db.all(`daily_voids?select=business_date,net,bills&outlet_id=eq.${id}&${range}&order=business_date`),
+    db.get(`import_batches?select=date_from,date_to&kind=eq.voids&date_from=lte.${to}&date_to=gte.${from}`),
+    db.get(`exceptions?select=id,business_date,kind,value,usual,impact,pct_of_expected,net_sales,expected,status&outlet_id=eq.${id}&${range}&order=business_date`),
+  ]);
+  return json({
+    outlet: { outlet_id: outlet.outlet_id, code: outlet.code, name: outlet.name, region: outlet.region },
+    from, to, days, sales, voids,
+    void_ranges: batches.map((b) => [b.date_from, b.date_to]),
+    exceptions,
+  });
+}

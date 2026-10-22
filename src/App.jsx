@@ -5,6 +5,7 @@ import { usePush, useUpdateCheck, usePullToRefresh, PULL_THRESHOLD } from './hoo
 import { loadAll, updateException, ROLES } from './data.js';
 import LangSelect from './LangSelect.jsx';
 import Upload from './Upload.jsx';
+import Trends from './Trends.jsx';
 import { t, useLang, locale, syncLangFromProfile, LANGUAGE_NAMES } from './i18n.js';
 
 const REFRESH_MS = 2 * 60 * 1000;
@@ -31,6 +32,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [flash, setFlash] = useState('');
+  const [trendOutlet, setTrendOutlet] = useState('');
   const [f, setF] = useState(() => ({ region: '', q: new URLSearchParams(window.location.search).get('q') || '' }));
   const push = usePush(session);
   const { updateReady, check: checkForUpdate } = useUpdateCheck();
@@ -118,6 +120,16 @@ export default function App() {
   const name = data?.profile?.full_name || session.user?.email;
   const pullVisible = pullDistance > 0 || refreshing;
   const role = data?.profile?.role;
+
+  // trends graph: the outlet asked for (?outlet=<code> or a card's Trends button), else the only outlet, else the
+  // outlet of the top open exception
+  const trendId = trendOutlet
+    || (data?.outlets?.find((o) => o.code === new URLSearchParams(window.location.search).get('outlet'))?.outlet_id)
+    || (data?.outlets?.length === 1 ? data.outlets[0].outlet_id : open[0]?.outlet_id) || '';
+  const showTrends = (outletId) => {
+    setTrendOutlet(outletId);
+    requestAnimationFrame(() => document.getElementById('trends')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   const act = async (e, status, note) => {
     try {
@@ -217,14 +229,16 @@ export default function App() {
 
           <PagedSection id="exc-open" anchor="needs-attention" title={t('Needs attention')} items={open}
             empty={<p className="muted">{t('Nothing flagged on the days uploaded.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} />)}</ul>}
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} />)}</ul>}
           </PagedSection>
+
+          <Trends outlets={data.outlets} outletId={trendId} onPick={setTrendOutlet} />
 
           {data.is_ops && <Upload outlets={data.outlets} onImported={async (msg) => { setFlash(msg); await load(); }} />}
 
           <PagedSection id="exc-resolved" title={t('Resolved')} items={resolved} defaultOpen={false} showCount={false}
             empty={<p className="muted">{t('No resolved exceptions in this period.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} />)}</ul>}
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} onTrend={showTrends} />)}</ul>}
           </PagedSection>
 
           <p className="muted small rules-note">
@@ -237,7 +251,7 @@ export default function App() {
   );
 }
 
-function ExceptionCard({ e, o, sales, voids, onAct }) {
+function ExceptionCard({ e, o, sales, voids, onAct, onTrend }) {
   const [note, setNote] = useState('');
   const isSales = SALES_KINDS.includes(e.kind);
   const crit = isSales ? e.kind === 'no_sales' || e.pct_of_expected < 30 : Number(e.impact) >= CRIT_RM;
@@ -285,6 +299,7 @@ function ExceptionCard({ e, o, sales, voids, onAct }) {
         {e.status === 'open' && <button type="button" className="btn" onClick={() => { onAct(e, 'acknowledged', note); setNote(''); }}>{t('Looking into it')}</button>}
         {e.status !== 'resolved' && <button type="button" className="btn btn-primary" onClick={() => { onAct(e, 'resolved', note); setNote(''); }}>{t('Resolve')}</button>}
         {e.status === 'resolved' && <button type="button" className="btn" onClick={() => { onAct(e, 'open', note); setNote(''); }}>{t('Reopen')}</button>}
+        <button type="button" className="link-btn exc-trend-btn" onClick={() => onTrend(e.outlet_id)}>{t('📈 Trends')}</button>
       </div>
     </li>
   );

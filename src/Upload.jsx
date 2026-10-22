@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import readXlsxFile from 'read-excel-file/browser';
 import { readWorkbook } from './importers.js';
-import { importSales, detectAll, notify, linkName, deleteSales, localDate, explainAll } from './data.js';
+import { importSales, detectAll, notify, linkName, deleteSales, localDate } from './data.js';
 import { t } from './i18n.js';
 
 // Operations: drop the Sales Summary Listing exports here — Sales (Status = Active) and Voids (Status = Voided +
@@ -58,12 +58,6 @@ export default function Upload({ outlets, onImported }) {
         msg = `${msg} ${t('{days} days checked: {n} exceptions ({sales} sales, {discounts} discount, {voids} void).', { days: list.length, n: r.flagged, sales: r.sales, discounts: r.discounts, voids: r.voids })}`;
         if (!r.voids_checked) msg = `${msg} ${t('Voids were not checked — no Voids export covers these days.')}`;
         if (r.method === 'baseline') msg = `${msg} ${t('The AI model could not be reached, so the weekday average was used ({error}).', { error: r.model_error || '' })}`;
-        try {
-          const n = await explainAll((done, left) => setProgress(t('Working out possible causes… {done} done, {left} left', { done, left })));
-          if (n) msg = `${msg} ${t('Possible causes written for {n} exceptions.', { n })}`;
-        } catch (err) {
-          msg = `${msg} ${t("Possible causes didn't finish: {error}", { error: err.message })}`;
-        }
         setProgress(t('Sending alerts…'));
         const n = await notify();
         if (n.people) msg = `${msg} ${t('Alerts sent to {n} people.', { n: n.people })}`;

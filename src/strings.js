@@ -1,6 +1,8 @@
 // Exception Agent screen translations. Key = the English text in the code (t('...')); missing entries fall back to
 // English. Placeholders like {n} must stay as they are. (Push wording: worker/messages.js.)
 const ms = {
+  "US Pizza promotions (and big competitor ones) that change sales or discounts.": "Promosi US Pizza (dan promosi besar pesaing) yang mengubah jualan atau diskaun.",
+  "Promotion added.": "Promosi ditambah.",
   "Couldn't work out causes: {error}": "Tidak dapat mencari punca: {error}",
   "Possible causes (simple rules — the AI was not available)": "Punca yang mungkin (peraturan mudah — AI tidak tersedia)",
   "Possible causes (AI, from the day's facts)": "Punca yang mungkin (AI, berdasarkan fakta hari itu)",
@@ -183,6 +185,8 @@ const ms = {
   "← Operations Hub": "← Hab Operasi",
 };
 const zh = {
+  "US Pizza promotions (and big competitor ones) that change sales or discounts.": "会影响销售或折扣的 US Pizza 促销（以及大型竞争对手促销）。",
+  "Promotion added.": "已添加促销。",
   "Couldn't work out causes: {error}": "无法分析原因：{error}",
   "Possible causes (simple rules — the AI was not available)": "可能原因（简单规则 — AI 暂不可用）",
   "Possible causes (AI, from the day's facts)": "可能原因（AI，根据当天的数据）",
@@ -365,6 +369,8 @@ const zh = {
   "← Operations Hub": "← 运营中心",
 };
 const my = {
+  "US Pizza promotions (and big competitor ones) that change sales or discounts.": "ရောင်းအား သို့မဟုတ် လျှော့စျေးကို ပြောင်းစေသော US Pizza ပရိုမိုးရှင်းများ (နှင့် ပြိုင်ဘက်၏ ကြီးမားသော ပရိုမိုးရှင်းများ)။",
+  "Promotion added.": "ပရိုမိုးရှင်း ထည့်ပြီး။",
   "Couldn't work out causes: {error}": "အကြောင်းရင်း ရှာမရပါ- {error}",
   "Possible causes (simple rules — the AI was not available)": "ဖြစ်နိုင်သော အကြောင်းရင်းများ (ရိုးရှင်းသော စည်းမျဉ်း — AI မရနိုင်ပါ)",
   "Possible causes (AI, from the day's facts)": "ဖြစ်နိုင်သော အကြောင်းရင်းများ (AI၊ ထိုနေ့ အချက်အလက်များမှ)",

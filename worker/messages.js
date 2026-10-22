@@ -32,7 +32,6 @@ const T = {
     zh: '{code} {outlet} {date}：作废 RM{value}，共 {bills} 张单（平时 RM{usual}）',
     my: '{code} {outlet} {date}: ဘောက်ချာ {bills} စောင်တွင် RM{value} ပယ်ဖျက် (ပုံမှန် RM{usual})',
   },
-  likely: { en: 'likely: {tag}', ms: 'kemungkinan: {tag}', zh: '可能：{tag}', my: 'ဖြစ်နိုင်သည်- {tag}' },
   more: { en: '+{n} more', ms: '+{n} lagi', zh: '另有 {n} 个', my: 'နောက်ထပ် {n} ခု' },
 };
 
@@ -60,7 +59,7 @@ export function summary(list, lang, max = 4) {
       net: money(e.net_sales), exp: money(e.expected), pct: e.pct_of_expected,
       value: e.kind === 'void_spike' ? money(e.value) : e.value, usual: e.kind === 'void_spike' ? money(e.usual) : e.usual,
       impact: money(e.impact), bills: e.bills ?? '?',
-    }) + (e.cause_tag ? ` — ${fill(T.likely[l], { tag: e.causes_i18n?.[l]?.tag || e.cause_tag })}` : '')
+    })
   );
   if (ranked.length > max) lines.push(fill(T.more[l], { n: ranked.length - max }));
   return { title, body: lines.join('\n') };

@@ -1,6 +1,5 @@
-// Promotions calendar: US Pizza promotions (and notable competitor ones) by date and region. The "possible causes"
-// AI reads them, so a discount spike during a promotion is explained as the promotion. Operations add / remove;
-// everyone can see them.
+// Promotions calendar: US Pizza promotions (and notable competitor ones) by date and region, so everyone can see what
+// was running when an outlet was flagged. Operations add / remove; everyone can see them.
 import { useState } from 'react';
 import { addPromotion, deletePromotion, localDate } from './data.js';
 import { PagedSection } from './Paged.jsx';
@@ -22,7 +21,7 @@ export default function Promotions({ promotions, regions, isOps, onChanged }) {
       await addPromotion(form);
       setForm((f) => ({ ...f, name: '', note: '', regions: [] }));
       setAdding(false);
-      await onChanged(t('Promotion added. Causes for those days will be worked out again.'));
+      await onChanged(t('Promotion added.'));
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -41,7 +40,7 @@ export default function Promotions({ promotions, regions, isOps, onChanged }) {
 
   return (
     <PagedSection id="exc-promos" title={t('Promotions')} items={promotions} showCount={false} defaultOpen={false}
-      note={t('US Pizza promotions (and big competitor ones) that change sales or discounts. The possible-causes AI takes them into account.')}
+      note={t('US Pizza promotions (and big competitor ones) that change sales or discounts.')}
       actions={isOps && !adding ? <button type="button" className="btn" onClick={() => setAdding(true)}>{t('+ Add promotion')}</button> : null}
       top={isOps && adding ? (
         <div className="promo-form">

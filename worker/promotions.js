@@ -1,5 +1,5 @@
-// Promotions calendar (operations): US Pizza promotions and notable competitor ones, so "possible causes" can say
-// "the X promotion was running" instead of guessing. Shown on the board; read by causes.js.
+// Promotions calendar (operations): US Pizza promotions and notable competitor ones, so
+// the board can show what was running when an outlet was flagged.
 import { sb } from './supabase.js';
 import { HttpError } from './import.js';
 
@@ -14,15 +14,12 @@ export async function addPromotion(env, body, user) {
   const [row] = await sb(env).insertReturning('promotions', [{
     name, source, starts, ends, regions, note: String(body.note || '').trim().slice(0, 300) || null, created_by: user.email || user.id,
   }]);
-  // exceptions on those days get their causes rewritten with the promotion in view
-  await sb(env).patch(`exceptions?business_date=gte.${starts}&business_date=lte.${ends}&causes_at=not.is.null`, { causes_at: null });
   return { id: row.id };
 }
 
 export async function deletePromotion(env, id) {
-  const [p] = await sb(env).get(`promotions?select=starts,ends&id=eq.${Number(id)}`);
+  const [p] = await sb(env).get(`promotions?select=id&id=eq.${Number(id)}`);
   if (!p) throw new HttpError(404, 'not found');
   await sb(env).del(`promotions?id=eq.${Number(id)}`);
-  await sb(env).patch(`exceptions?business_date=gte.${p.starts}&business_date=lte.${p.ends}&causes_at=not.is.null`, { causes_at: null });
   return { deleted: Number(id) };
 }

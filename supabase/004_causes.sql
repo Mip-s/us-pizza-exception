@@ -101,3 +101,8 @@ grant all on all sequences in schema exception_agent to service_role;
 
 -- 22/10 (later): the causes in Malay / Chinese / Burmese, translated from the English ones by Workers AI
 alter table exception_agent.exceptions add column causes_i18n jsonb; -- { ms|zh|my: { tag, causes: [{cause, evidence, check}] } }
+
+-- 22/10 (later still): AI "possible causes" removed (not good enough). Promotions calendar kept.
+alter table exception_agent.exceptions drop column if exists causes, drop column if exists cause_tag, drop column if exists context,
+  drop column if exists causes_at, drop column if exists causes_i18n;
+drop table if exists exception_agent.outlet_geo;

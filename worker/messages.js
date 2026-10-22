@@ -60,7 +60,7 @@ export function summary(list, lang, max = 4) {
       net: money(e.net_sales), exp: money(e.expected), pct: e.pct_of_expected,
       value: e.kind === 'void_spike' ? money(e.value) : e.value, usual: e.kind === 'void_spike' ? money(e.usual) : e.usual,
       impact: money(e.impact), bills: e.bills ?? '?',
-    }) + (e.cause_tag ? ` — ${fill(T.likely[l], { tag: e.cause_tag })}` : '')
+    }) + (e.cause_tag ? ` — ${fill(T.likely[l], { tag: e.causes_i18n?.[l]?.tag || e.cause_tag })}` : '')
   );
   if (ranked.length > max) lines.push(fill(T.more[l], { n: ranked.length - max }));
   return { title, body: lines.join('\n') };

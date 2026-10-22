@@ -12,7 +12,7 @@ export async function handleData(request, env, who) {
   const db = sb(env);
   const scope = ids.length ? `outlet_id=in.(${ids.join(',')})` : 'outlet_id=is.null';
   const [exceptions, sales, voids, batches, promotions] = await Promise.all([
-    db.get(`exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,usual_low,usual_high,pct_of_expected,bills,method,same_day,value,usual,impact,causes,cause_tag,causes_at,status,note,created_at,resolved_at&${scope}&business_date=gte.${from}&order=business_date.desc,impact.desc.nullslast&limit=2000`),
+    db.get(`exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,usual_low,usual_high,pct_of_expected,bills,method,same_day,value,usual,impact,causes,cause_tag,causes_i18n,causes_at,status,note,created_at,resolved_at&${scope}&business_date=gte.${from}&order=business_date.desc,impact.desc.nullslast&limit=2000`),
     db.all(`daily_sales?select=outlet_id,business_date,net,bills,gross,discount&${scope}&business_date=gte.${from}&order=business_date`),
     db.all(`daily_voids?select=outlet_id,business_date,net,bills&${scope}&business_date=gte.${from}&order=business_date`),
     db.get('import_batches?select=id,kind,file_name,date_from,date_to,row_count,outlets,imported_by,imported_at,unmatched,skipped&order=imported_at.desc&limit=10'),

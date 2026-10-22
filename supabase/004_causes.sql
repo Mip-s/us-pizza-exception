@@ -98,3 +98,6 @@ alter table exception_agent.outlet_geo enable row level security;
 alter table exception_agent.promotions enable row level security;
 grant all on exception_agent.outlet_geo, exception_agent.promotions to service_role;
 grant all on all sequences in schema exception_agent to service_role;
+
+-- 22/10 (later): the causes in Malay / Chinese / Burmese, translated from the English ones by Workers AI
+alter table exception_agent.exceptions add column causes_i18n jsonb; -- { ms|zh|my: { tag, causes: [{cause, evidence, check}] } }

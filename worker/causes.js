@@ -6,13 +6,15 @@
 // own pattern (bills vs average ticket, days before / after), and the other modules (POS downtime from the Uptime
 // Monitor's D1, open equipment faults, bad reviews). Then Workers AI is asked to rank the likely causes using ONLY
 // those facts. If the AI can't be reached, simple rules on the same facts give the causes instead (source "rules").
-// Saved on the exception: causes [{cause, likelihood, evidence, check}], cause_tag (a few words for the push), context.
+// Saved on the exception: causes [{cause, likelihood, evidence, check}], cause_tag (a few words for the push), context,
+// and causes_i18n: the same causes translated into Malay / Chinese / Burmese (a second, short AI call) so the board and
+// the push follow each person's language. If the translation fails, those languages show the English.
 
 import { sb } from './supabase.js';
 import { calendarFacts } from './calendar.js';
 import { addDays, todayMYT, robust } from './rules.js';
 
-export const EXPLAIN_PER_CALL = 6; // Workers AI calls per request (Cloudflare's 50-subrequest cap per request)
+export const EXPLAIN_PER_CALL = 4; // exceptions per request: 2 Workers AI calls each (causes + translation), under Cloudflare's 50-subrequest cap
 export const AUTO_DAYS = 7; // new exceptions of the last 7 days are explained automatically after each upload
 const AI_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8'; // same model as Review Watcher
 const OPEN_FROM = 11; // opening hours used for "rain while open" (11:00–21:59)
@@ -187,6 +189,48 @@ export function parseCauses(text) {
   return { tag: clip(o.tag, 40) || causes[0].cause.slice(0, 40), causes };
 }
 
+// ---------- translation (ms / zh / my) ----------
+const TRANSLATE_TO = { ms: 'Malay (Bahasa Melayu)', zh: 'Simplified Chinese', my: 'Burmese (Myanmar)' };
+export function translateMessages(answer) {
+  const src = { tag: answer.tag, causes: answer.causes.map(({ cause, evidence, check }) => ({ cause, evidence, check })) };
+  return [
+    { role: 'system', content: 'You translate short operations notes for a Malaysian pizza chain. Translate every text value of the JSON into '
+      + `${Object.entries(TRANSLATE_TO).map(([k, v]) => `${v} ("${k}")`).join(', ')}. Keep numbers, RM amounts, percentages, dates, times, outlet codes and names `
+      + '(US Pizza, Grab, foodpanda, ShopeeFood, POS, KDS, Codemax) exactly as they are. Keep the same number of causes in the same order. '
+      + 'Answer with JSON only: {"ms": {"tag": "...", "causes": [{"cause": "...", "evidence": "...", "check": "..."}]}, "zh": {...}, "my": {...}}' },
+    { role: 'user', content: `${JSON.stringify(src)}\n/no_think` },
+  ];
+}
+export function parseTranslations(text, answer) {
+  const t = String(text || '').replace(/<think>[\s\S]*?<\/think>/g, '');
+  const a = t.indexOf('{');
+  const b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  let o;
+  try { o = JSON.parse(t.slice(a, b + 1)); } catch { return null; }
+  const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const out = {};
+  for (const lang of Object.keys(TRANSLATE_TO)) {
+    const x = o?.[lang];
+    if (!x || !Array.isArray(x.causes) || x.causes.length !== answer.causes.length) continue;
+    const causes = x.causes.map((c, i) => ({
+      cause: clip(c.cause, 160) || answer.causes[i].cause, evidence: clip(c.evidence, 320) || answer.causes[i].evidence, check: clip(c.check, 320) || answer.causes[i].check,
+    }));
+    out[lang] = { tag: clip(x.tag, 60) || answer.tag, causes };
+  }
+  return Object.keys(out).length ? out : null;
+}
+async function translate(env, answer) {
+  try {
+    const out = await env.AI.run(env.CAUSES_MODEL || AI_MODEL, { messages: translateMessages(answer), temperature: 0.1, max_tokens: 2000 });
+    const text = out?.choices?.[0]?.message?.content ?? out?.response ?? '';
+    return parseTranslations(typeof text === 'string' ? text : JSON.stringify(text), answer);
+  } catch (err) {
+    console.error('explain translate:', err.message);
+    return null;
+  }
+}
+
 // ---------- rules, when the AI can't answer ----------
 export function ruleCauses(e, f) {
   const c = [];
@@ -284,7 +328,8 @@ export async function runExplain(env, { ids = null, now = Date.now() } = {}) {
       answer = ruleCauses(e, facts);
       source = 'rules';
     }
-    return { id: e.id, patch: { causes: answer.causes.map((c) => ({ ...c, source })), cause_tag: answer.tag, context: facts, causes_at: new Date(now).toISOString() } };
+    const i18n = env.AI ? await translate(env, answer) : null;
+    return { id: e.id, patch: { causes: answer.causes.map((c) => ({ ...c, source })), cause_tag: answer.tag, causes_i18n: i18n, context: facts, causes_at: new Date(now).toISOString() } };
   }));
   for (const r of results) await db.patch(`exceptions?id=eq.${r.id}`, r.patch);
   const left = ids?.length ? 0 : (await db.get(`exceptions?select=id&causes_at=is.null&business_date=gte.${addDays(today, -AUTO_DAYS)}&limit=50`)).length;

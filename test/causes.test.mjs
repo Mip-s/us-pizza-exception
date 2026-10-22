@@ -42,3 +42,14 @@ test('prompt carries the facts and asks for JSON only', () => {
   assert.match(m[1].content, /026 ST Rosyam Mall Klang/);
   assert.match(m[1].content, /"rain_mm_while_open":30/);
 });
+
+test('translations: kept only when every language has the same causes', async () => {
+  const { parseTranslations, translateMessages } = await import('../worker/causes.js');
+  const answer = { tag: 'Heavy rain', causes: [{ cause: 'Heavy rain', likelihood: 'high', evidence: '28 mm', check: 'delivery share' }] };
+  assert.match(translateMessages(answer)[0].content, /Burmese/);
+  const r = parseTranslations('{"ms":{"tag":"Hujan lebat","causes":[{"cause":"Hujan lebat","evidence":"28 mm","check":"bahagian penghantaran"}]},"zh":{"tag":"大雨","causes":[{"cause":"大雨"},{"cause":"extra"}]},"my":{"tag":"မိုးသည်း","causes":[{"cause":"မိုးသည်း","evidence":"28 mm","check":"x"}]}}', answer);
+  assert.equal(r.ms.causes[0].cause, 'Hujan lebat');
+  assert.equal(r.zh, undefined); // wrong number of causes: dropped (shows English)
+  assert.equal(r.my.tag, 'မိုးသည်း');
+  assert.equal(parseTranslations('nope', answer), null);
+});

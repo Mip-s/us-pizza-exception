@@ -7,7 +7,7 @@ import LangSelect from './LangSelect.jsx';
 import Upload from './Upload.jsx';
 import Trends from './Trends.jsx';
 import Promotions from './Promotions.jsx';
-import { t, useLang, locale, syncLangFromProfile, LANGUAGE_NAMES } from './i18n.js';
+import { t, useLang, locale, getLang, syncLangFromProfile, LANGUAGE_NAMES } from './i18n.js';
 
 const REFRESH_MS = 2 * 60 * 1000;
 const IN_HUB = window.location.pathname.startsWith('/exception');
@@ -307,11 +307,15 @@ function ExceptionCard({ e, o, sales, voids, onAct, onTrend, onExplain }) {
         </div>
         <Spark series={series} day={e.business_date} level={level} label={t(e.kind === 'discount_spike' ? 'Discount %, last 28 days' : e.kind === 'void_spike' ? 'Voids, last 28 days' : 'Sales, last 28 days')} />
       </div>
-      {e.causes?.length ? (
+      {e.causes?.length ? (() => {
+        // the causes in the viewer's language when translated, else English
+        const tr = e.causes_i18n?.[getLang()];
+        const shown = e.causes.map((c, i) => ({ ...c, ...(tr?.causes?.[i] || {}) }));
+        return (
         <div className="causes">
           <div className="causes-head small">{e.causes[0].source === 'rules' ? t('Possible causes (simple rules — the AI was not available)') : t('Possible causes (AI, from the day\'s facts)')}</div>
           <ol>
-            {e.causes.map((c, i) => (
+            {shown.map((c, i) => (
               <li key={i}>
                 <span className={`lk lk-${c.likelihood}`}>{t(LIKELY[c.likelihood] || 'Low')}</span> <strong>{c.cause}</strong>
                 {c.evidence && <div className="small muted">{c.evidence}</div>}
@@ -320,7 +324,8 @@ function ExceptionCard({ e, o, sales, voids, onAct, onTrend, onExplain }) {
             ))}
           </ol>
         </div>
-      ) : (
+        );
+      })() : (
         <div className="causes causes-empty small">
           <button type="button" className="link-btn" disabled={explaining} onClick={async () => { setExplaining(true); await onExplain(e.id); setExplaining(false); }}>
             {explaining ? t('Working out possible causes…') : t('🤖 Why? Work out possible causes')}

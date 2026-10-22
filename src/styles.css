@@ -298,3 +298,7 @@ html, body { overscroll-behavior-y: contain; }
 .delete-sales-row input[type="date"] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
 .btn-danger { background: #c62828; color: #fff; border-color: #c62828; }
 .btn-danger:hover:not(:disabled) { background: #a61f1f; border-color: #a61f1f; color: #fff; }
+
+/* which export a dropped file is */
+.kind-tag { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 8px; margin-left: 6px; background: #eef2fb; color: var(--blue); }
+.kind-tag.kind-voids { background: #fdecea; color: #b3261e; }

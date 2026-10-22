@@ -8,6 +8,19 @@ export const HISTORY_DAYS = 90; // history sent to the model
 export const MAX_GAP_DAYS = 14; // last sale older than this before the day -> weekday baseline
 export const NOTIFY_RECENT_DAYS = 3; // exceptions older than this (back-filling a month) are listed, not pushed
 export const DETECT_PER_CALL = 7; // days checked per /api/detect request (one Modal call each; Worker request cap)
+
+// Discount and void spikes: each outlet against its own last TRAIL_DAYS days (median + robust spread).
+// Tuned on Mar-Oct 2026 data: about one discount and one void outlet-day a day across the chain.
+export const TRAIL_DAYS = 28;
+export const TRAIL_MIN = 10; // fewer days of history -> not judged
+export const DISCOUNT_PP = 0.10; // discount share at least 10 percentage points above the outlet's usual
+export const DISCOUNT_Z = 4; //   ... and 4 robust spreads above it
+export const DISCOUNT_MIN_RM = 150; // ... and at least RM150 more discount than usual
+export const VOID_MULT = 3; // voids at least 3x the outlet's usual day
+export const VOID_Z = 5; //   ... and 5 robust spreads above it
+export const VOID_MIN_RM = 200; // ... and at least RM200 voided
+export const VOID_SHARE = 0.10; // ... and at least 10% of that day's sales
+export const CRIT_RM = 500; // RM at stake from which an exception shows red
 const DAY = 86400e3;
 
 export const ymd = (ms) => new Date(ms).toISOString().slice(0, 10);
@@ -59,6 +72,37 @@ export function weekdayBaseline(hist) {
   for (const r of hist) if (r.net > 0 && lvl[r.outlet_id] != null) (devs[weekday(r.business_date)] ||= []).push(Math.log(r.net) - lvl[r.outlet_id]);
   const dowf = Object.fromEntries(Object.entries(devs).map(([d, a]) => [d, median(a)]));
   return (outletId, day) => (lvl[outletId] == null ? null : Math.exp(lvl[outletId] + (dowf[weekday(day)] || 0)));
+}
+
+// median and robust spread (1.4826 x median absolute deviation) of a list of numbers
+export function robust(values) {
+  const s = [...values].sort((a, b) => a - b);
+  const med = (a) => (a.length % 2 ? a[a.length >> 1] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2);
+  const m = med(s);
+  return { median: m, spread: 1.4826 * med(values.map((v) => Math.abs(v - m)).sort((a, b) => a - b)) };
+}
+
+// Discount spike. day: { gross, discount }; hist: [{ gross, discount }] (the outlet's days before, gross > 0)
+// -> { kind, value (discount % today), usual (% usually), impact (RM of discount above usual) } | null
+export function judgeDiscount(day, hist) {
+  const g = Number(day?.gross);
+  if (!(g > 0) || hist.length < TRAIL_MIN) return null;
+  const { median, spread } = robust(hist.map((h) => Number(h.discount) / Number(h.gross)));
+  const share = Number(day.discount) / g;
+  const excess = (share - median) * g;
+  if (share - median < DISCOUNT_PP || (share - median) / Math.max(spread, 0.02) < DISCOUNT_Z || excess < DISCOUNT_MIN_RM) return null;
+  return { kind: 'discount_spike', value: Math.round(share * 100), usual: Math.round(median * 100), impact: Math.round(excess) };
+}
+
+// Void spike. voids: RM voided today (0 if none); hist: RM voided on each of the outlet's days before (0 = none);
+// sales: today's net sales -> { kind, value (RM voided), usual (RM usually), impact (RM above usual) } | null
+export function judgeVoids(voids, hist, sales) {
+  if (hist.length < TRAIL_MIN) return null;
+  const v = Math.max(Number(voids) || 0, 0);
+  const { median, spread } = robust(hist.map((x) => Math.max(Number(x) || 0, 0)));
+  if (v < VOID_MIN_RM || v < VOID_MULT * Math.max(median, 1) || (v - median) / Math.max(spread, 20) < VOID_Z) return null;
+  if (!(Number(sales) > 0) || v / Number(sales) < VOID_SHARE) return null;
+  return { kind: 'void_spike', value: Math.round(v), usual: Math.round(median), impact: Math.round(v - median) };
 }
 
 // Decide one outlet-day. sale: { net, bills } | null (no row that day); exp: { expected, low, high, method } | null

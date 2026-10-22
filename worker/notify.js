@@ -1,4 +1,5 @@
-// POST /api/notify — after an upload and its detection: one summary push per person for the exceptions not pushed yet
+// POST /api/notify — after an upload and its detection: one ranked summary push per person (most RM at stake first)
+// for the exceptions not pushed yet
 // (only days from the last NOTIFY_RECENT_DAYS; older back-filled days were marked as notified by detect.js).
 //   operations team -> every outlet's exceptions (HOD)
 //   area manager    -> the exceptions of their outlets
@@ -15,7 +16,7 @@ const BUDGET = 40; // requests this run may spend on pushes (cap is 50; the rest
 export async function runNotify(env) {
   const db = sb(env);
   const pub = sbPublic(env);
-  const pending = await db.get('exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,pct_of_expected&notified_at=is.null&status=eq.open&order=pct_of_expected.asc');
+  const pending = await db.get('exceptions?select=id,outlet_id,business_date,kind,net_sales,expected,pct_of_expected,value,usual,impact,bills&notified_at=is.null&status=eq.open&order=impact.desc.nullslast');
   if (!pending.length) return { people: 0, delivered: 0, skipped: 0 };
 
   const ids = [...new Set(pending.map((e) => e.outlet_id))].join(',');
@@ -56,16 +57,16 @@ export async function runNotify(env) {
     if (spent + cost > BUDGET) {
       skipped += 1; // over this run's request cap: listed in the notification centre, not pushed (never twice)
       const msg = summary(p.items, p.lang);
-      notes.push({ user_id: uid, module: 'exception', category: 'sales_drop', title: msg.title, body: msg.body, url: '/exception', outlet_id: null, delivered: false });
+      notes.push({ user_id: uid, module: 'exception', category: 'daily', title: msg.title, body: msg.body, url: '/exception', outlet_id: null, delivered: false });
       continue;
     }
     const msg = summary(p.items, p.lang);
     const one = new Set(p.items.map((e) => e.code)).size === 1;
     const url = one ? `/exception?q=${encodeURIComponent(p.items[0].code)}` : '/exception';
-    const n = await send(env, uid, { ...msg, tag: 'exception-sales', urgency: 'high', url });
+    const n = await send(env, uid, { ...msg, tag: 'exception-daily', urgency: 'high', url });
     spent += cost;
     delivered += n ? 1 : 0;
-    notes.push({ user_id: uid, module: 'exception', category: 'sales_drop', title: msg.title, body: msg.body, url,
+    notes.push({ user_id: uid, module: 'exception', category: 'daily', title: msg.title, body: msg.body, url,
       outlet_id: one ? p.items[0].outlet_id : null, delivered: n > 0 });
   }
   if (notes.length) await pub.insert('notifications', notes).catch((err) => console.error('notification centre:', err.message));

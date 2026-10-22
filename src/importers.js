@@ -7,7 +7,20 @@
 //   Outlet: 001-US Pizza Kelana Jaya
 //   [blank] | 2026-09-01 | 2097.02 | 434.98 | 1662.04 | ...
 //   [blank] | Subtotal | ...
-// Recognised by its column headings, not its file name.
+// Recognised by its column headings, not its file name. Which bills it holds comes from the "Filters:" line:
+//   Status = Active (+ Returned)        -> kind 'sales'
+//   Status = Voided and/or Cancelled    -> kind 'voids'
+//   Active together with Voided / Cancelled / Non-sale -> kind 'mixed' (refused: the totals can't be split)
+//   no Status in the filter (= every status) -> 'mixed'
+
+export function exportKind(filterLine) {
+  const st = new Set([...String(filterLine || '').matchAll(/Status equal to ([A-Za-z-]+)/gi)].map((m) => m[1].toLowerCase()));
+  if (!st.size) return 'mixed';
+  const sale = st.has('active') || st.has('returned');
+  const voids = st.has('voided') || st.has('cancelled');
+  if (st.has('non-sale') || (sale && voids)) return 'mixed';
+  return voids ? 'voids' : 'sales';
+}
 
 const clean = (v) => (v == null ? '' : String(v).replace(/\s+/g, ' ').trim());
 const pad = (n) => String(n).padStart(2, '0');
@@ -43,7 +56,9 @@ export function parseSalesSummary(rows) {
   // "Filters: ((Business Date from 1/9/2026 to 30/9/2026) ..."
   let from = null;
   let to = null;
+  let filter = '';
   for (const r of rows.slice(0, h)) {
+    if (/^Filters:/i.test(clean(r[0]))) filter = clean(r[0]);
     const m = clean(r[0]).match(/Business Date from (\d{1,2}\/\d{1,2}\/\d{4}) to (\d{1,2}\/\d{1,2}\/\d{4})/);
     if (m) [from, to] = [ymd(m[1]), ymd(m[2])];
   }
@@ -71,6 +86,7 @@ export function parseSalesSummary(rows) {
   }
   const dates = out.map((r) => r.date).sort();
   return {
+    kind: exportKind(filter),
     rows: out,
     from: from || dates[0] || null,
     to: to || dates[dates.length - 1] || null,

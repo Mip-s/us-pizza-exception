@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nameKey, isMfm, resolver, weekdayBaseline, judge, detectDays, addDays } from '../worker/rules.js';
+import { nameKey, isMfm, resolver, weekdayBaseline, judge, detectDays, addDays, judgeDiscount, judgeVoids } from '../worker/rules.js';
 import { summary } from '../worker/messages.js';
 
 const outlets = [
@@ -61,18 +61,44 @@ test('days to check: newest first, not today, not older than 35 days', () => {
   assert.deepEqual(detectDays(['2026-10-20', '2026-10-19', '2026-10-20', '2026-10-21', '2026-08-01'], '2026-10-21'), ['2026-10-20', '2026-10-19']);
 });
 
-test('push summary in the user\'s language, worst first, capped', () => {
+test('push summary in the user\'s language, ranked by RM at stake across kinds, capped', () => {
   const list = [
-    { code: '075', name: 'US Pizza Hextar World Empire City Mall', business_date: '2026-09-27', kind: 'sales_drop', net_sales: 113.79, expected: 1141.33, pct_of_expected: 10 },
-    { code: '014', name: 'US Pizza Batu Pahat', business_date: '2026-09-27', kind: 'no_sales', net_sales: 0, expected: 1500, pct_of_expected: 0 },
-    { code: '027', name: 'US Pizza Sungai Petani', business_date: '2026-09-27', kind: 'sales_drop', net_sales: 209, expected: 1925, pct_of_expected: 11 },
-    { code: '001', name: 'US Pizza Kelana Jaya', business_date: '2026-09-27', kind: 'sales_drop', net_sales: 500, expected: 1700, pct_of_expected: 29 },
+    { code: '075', name: 'US Pizza Hextar World Empire City Mall', business_date: '2026-09-27', kind: 'sales_drop', net_sales: 113.79, expected: 1141.33, pct_of_expected: 10, impact: 1028 },
+    { code: '014', name: 'US Pizza Batu Pahat', business_date: '2026-09-27', kind: 'no_sales', net_sales: 0, expected: 1500, pct_of_expected: 0, impact: 1500 },
+    { code: '005', name: 'US Pizza SS2', business_date: '2026-09-27', kind: 'void_spike', value: 391, usual: 0, impact: 391, bills: 1 },
+    { code: '033', name: 'US Pizza Dpulze', business_date: '2026-09-27', kind: 'discount_spike', value: 33, usual: 22, impact: 553 },
+    { code: '001', name: 'US Pizza Kelana Jaya', business_date: '2026-09-27', kind: 'sales_drop', net_sales: 500, expected: 1700, pct_of_expected: 29, impact: 1200 },
   ];
   const en = summary(list, 'en');
-  assert.equal(en.title, '📉 Sales below normal · 4 outlets');
-  assert.match(en.body, /^075 Hextar World Empire City Mall 27\/9: RM114 \(10% of usual RM1,141\)/);
-  assert.match(en.body, /014 Batu Pahat 27\/9: no sales in the report/);
-  assert.match(en.body, /\+1 more$/);
-  assert.match(summary(list.slice(0, 1), 'ms').title, /Jualan di bawah biasa · 1 outlet/);
-  assert.match(summary(list, 'xx').title, /Sales below normal/);
+  assert.equal(en.title, '🚨 Exceptions · 5 outlets');
+  const lines = en.body.split('\n');
+  assert.match(lines[0], /^014 Batu Pahat 27\/9: no sales in the report \(usual RM1,500\)/);
+  assert.match(lines[1], /^001 Kelana Jaya 27\/9: sales RM500 \(29% of usual RM1,700\)/);
+  assert.match(lines[3], /^033 Dpulze 27\/9: discounts 33% of sales \(usual 22%, \+RM553\)/);
+  assert.equal(lines[4], '+1 more');
+  assert.match(summary(list.slice(2, 3), 'en').body, /005 SS2 27\/9: RM391 voided in 1 bills \(usual RM0\)/);
+  assert.match(summary(list.slice(0, 1), 'ms').title, /Pengecualian · 1 outlet/);
+  assert.match(summary(list, 'xx').title, /Exceptions/);
+});
+
+test('discount spike: far above the outlet\'s own usual share, and enough RM', () => {
+  const hist = Array.from({ length: 20 }, (_, i) => ({ gross: 3000, discount: 700 + (i % 5) * 20 })); // ~24-26%
+  assert.equal(judgeDiscount({ gross: 3000, discount: 800 }, hist), null); // 27%: normal
+  const r = judgeDiscount({ gross: 3000, discount: 1300 }, hist); // 43%
+  assert.equal(r.kind, 'discount_spike');
+  assert.equal(r.value, 43);
+  assert.ok(r.impact >= 150);
+  assert.equal(judgeDiscount({ gross: 500, discount: 250 }, hist), null); // 50%, but only ~RM125 extra on a small day: below RM150
+  assert.equal(judgeDiscount({ gross: 3000, discount: 1300 }, hist.slice(0, 5)), null); // too little history
+});
+
+test('void spike: well above the outlet\'s usual voids, at least RM200 and 10% of sales', () => {
+  const hist = [0, 0, 40, 0, 60, 0, 0, 25, 0, 0, 50, 0, 0, 0];
+  assert.equal(judgeVoids(150, hist, 2500), null); // below RM200
+  assert.equal(judgeVoids(220, hist, 4000), null); // under 10% of sales
+  const r = judgeVoids(400, hist, 2500);
+  assert.equal(r.kind, 'void_spike');
+  assert.equal(r.value, 400);
+  assert.equal(r.usual, 0);
+  assert.equal(judgeVoids(400, Array(14).fill(150), 2500), null); // this outlet usually voids ~RM150: 400 is < 3x
 });

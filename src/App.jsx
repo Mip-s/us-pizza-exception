@@ -17,7 +17,12 @@ const dayName = (ymd) => new Date(`${ymd}T00:00:00+08:00`).toLocaleDateString(lo
 const hm = (ms) => new Date(ms).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 const dmhm = (iso) => (iso ? new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 const regionName = (r) => r || t('Unassigned');
-const KIND = { sales_drop: 'Sales far below normal', no_sales: 'No sales in the report' };
+const KIND = {
+  sales_drop: 'Sales far below normal', no_sales: 'No sales in the report',
+  discount_spike: 'Discounts far above usual', void_spike: 'Voids far above usual',
+};
+const SALES_KINDS = ['sales_drop', 'no_sales'];
+const CRIT_RM = 500; // RM at stake from which an exception shows red (worker/rules.js)
 const STATUS = { open: 'Open', acknowledged: 'Looking into it', resolved: 'Resolved' };
 
 export default function App() {
@@ -74,6 +79,11 @@ export default function App() {
     for (const s of data?.sales || []) (m[s.outlet_id] ||= []).push(s);
     return m;
   }, [data]);
+  const voidsBy = useMemo(() => {
+    const m = {};
+    for (const v of data?.voids || []) m[`${v.outlet_id}|${v.business_date}`] = Number(v.net) || 0;
+    return m;
+  }, [data]);
   const inScope = (outletId) => {
     const o = outletBy[outletId];
     if (!o) return false;
@@ -103,8 +113,8 @@ export default function App() {
   const open = exceptions.filter((e) => e.status !== 'resolved');
   const resolved = exceptions.filter((e) => e.status === 'resolved');
   const lastDay = (data?.sales || []).reduce((m, s) => (s.business_date > m ? s.business_date : m), '');
-  const lastDayFlags = exceptions.filter((e) => e.business_date === lastDay);
-  const lastUpload = data?.uploads?.[0];
+  const lastDayFlags = [...new Set(exceptions.filter((e) => e.business_date === lastDay).map((e) => e.outlet_id))];
+  const lastUpload = data?.uploads?.find((u) => u.kind !== 'voids');
   const name = data?.profile?.full_name || session.user?.email;
   const pullVisible = pullDistance > 0 || refreshing;
   const role = data?.profile?.role;
@@ -130,8 +140,8 @@ export default function App() {
         <div>
           <a className="back" href={hubHome}>{t('← Operations Hub')}</a>
           <div className="eyebrow">{t('Exception Agent')}</div>
-          <h1>{t('Sales exceptions')}</h1>
-          <p className="muted">{t("Each outlet's daily sales compared with what an AI model (Chronos-2) expected for that outlet and day. A day below half of normal is flagged to the area manager and HOD.")}</p>
+          <h1>{t('Daily exceptions')}</h1>
+          <p className="muted">{t("Each outlet against its own normal: sales far below what an AI model (Chronos-2) expected, discounts or voids far above its usual. Ranked by RM at stake and sent to the area manager and HOD after each upload.")}</p>
         </div>
         <div className="toolbar">
           <button type="button" className="tool" onClick={handleRefresh} disabled={refreshing}>
@@ -206,19 +216,20 @@ export default function App() {
           )}
 
           <PagedSection id="exc-open" anchor="needs-attention" title={t('Needs attention')} items={open}
-            empty={<p className="muted">{t('Nothing flagged. Every outlet sold at least half of its normal on the days uploaded.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} onAct={act} />)}</ul>}
+            empty={<p className="muted">{t('Nothing flagged on the days uploaded.')}</p>}>
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} />)}</ul>}
           </PagedSection>
 
           {data.is_ops && <Upload outlets={data.outlets} onImported={async (msg) => { setFlash(msg); await load(); }} />}
 
           <PagedSection id="exc-resolved" title={t('Resolved')} items={resolved} defaultOpen={false} showCount={false}
             empty={<p className="muted">{t('No resolved exceptions in this period.')}</p>}>
-            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} onAct={act} />)}</ul>}
+            {(shown) => <ul className="exc-list">{shown.map((e) => <ExceptionCard key={e.id} e={e} o={outletBy[e.outlet_id]} sales={salesBy[e.outlet_id] || []} voids={voidsBy} onAct={act} />)}</ul>}
           </PagedSection>
 
           <p className="muted small rules-note">
-            {t('How it works: the AI model (Chronos-2) looks at each outlet\'s sales up to the day before and predicts that day, with a usual range. A day below half of the prediction is flagged; "no sales" means the outlet sold the week before but is missing from the report. When the model can\'t be reached, the outlet\'s usual sales for that weekday are used instead. Several outlets flagged on the same day usually means one common cause (rain, a holiday, a system problem).')}
+            {t('How it works: the AI model (Chronos-2) looks at each outlet\'s sales up to the day before and predicts that day, with a usual range. A day below half of the prediction is flagged; "no sales" means the outlet sold the week before but is missing from the report. When the model can\'t be reached, the outlet\'s usual sales for that weekday are used instead. Several outlets flagged on the same day usually means one common cause (rain, a holiday, a system problem).')}{' '}
+            {t('Discounts and voids are compared with the outlet\'s own last 28 days: a day is flagged when its discount share is at least 10 points above usual (and RM150+ extra), or when it voided at least 3x its usual, RM200+ and 10%+ of that day\'s sales. Voids are only checked on days a Voids export was uploaded.')}
           </p>
         </>
       )}
@@ -226,31 +237,47 @@ export default function App() {
   );
 }
 
-function ExceptionCard({ e, o, sales, onAct }) {
+function ExceptionCard({ e, o, sales, voids, onAct }) {
   const [note, setNote] = useState('');
-  const pct = e.kind === 'no_sales' ? 0 : e.pct_of_expected;
+  const isSales = SALES_KINDS.includes(e.kind);
+  const crit = isSales ? e.kind === 'no_sales' || e.pct_of_expected < 30 : Number(e.impact) >= CRIT_RM;
+  const badge = e.kind === 'no_sales' ? t('No sales')
+    : e.kind === 'sales_drop' ? `${e.pct_of_expected}%`
+    : e.kind === 'discount_spike' ? t('{n}% disc.', { n: e.value })
+    : money(e.value);
+  // the sparkline follows what was flagged
+  const series = e.kind === 'discount_spike'
+    ? sales.filter((s) => Number(s.gross) > 0).map((s) => ({ d: s.business_date, v: (100 * Number(s.discount)) / Number(s.gross) }))
+    : e.kind === 'void_spike'
+      ? sales.map((s) => ({ d: s.business_date, v: voids[`${e.outlet_id}|${s.business_date}`] || 0 }))
+      : sales.map((s) => ({ d: s.business_date, v: Number(s.net) }));
+  const level = isSales ? e.expected : e.usual;
   return (
-    <li className={`exc exc-${e.status}`}>
+    <li className={`exc exc-${e.status} exc-kind-${e.kind}`}>
       <div className="exc-head">
         <div>
           <strong><span className="muted">{o?.code}</span> {shortName(o?.name)}</strong>
           <div className="muted small">{regionName(o?.region)} · {dayName(e.business_date)}</div>
         </div>
-        <span className={`exc-badge ${pct < 30 ? 'crit' : 'warn'}`}>{e.kind === 'no_sales' ? t('No sales') : `${pct}%`}</span>
+        <span className={`exc-badge ${crit ? 'crit' : 'warn'}`}>{badge}</span>
       </div>
       <div className="exc-body">
         <div>
           <strong>{t(KIND[e.kind])}</strong>
           <div className="small">
-            {e.kind === 'no_sales'
-              ? t('Usually about {exp} on this day.', { exp: money(e.expected) })
-              : t('{net} from {bills} bills · usually about {exp}', { net: money(e.net_sales), bills: e.bills ?? '–', exp: money(e.expected) })}
-            {e.usual_low != null && <span className="muted"> ({t('normal range {low}–{high}', { low: money(e.usual_low), high: money(e.usual_high) })})</span>}
+            {e.kind === 'no_sales' && t('Usually about {exp} on this day.', { exp: money(e.expected) })}
+            {e.kind === 'sales_drop' && t('{net} from {bills} bills · usually about {exp}', { net: money(e.net_sales), bills: e.bills ?? '–', exp: money(e.expected) })}
+            {e.kind === 'discount_spike' && t('Discounts were {value}% of sales (usually {usual}%) · about {extra} more discount than usual', { value: e.value, usual: e.usual, extra: money(e.impact) })}
+            {e.kind === 'void_spike' && t('{value} voided in {bills} bills (usually about {usual} a day) · {pct}% of the day\'s sales', { value: money(e.value), bills: e.bills ?? '–', usual: money(e.usual), pct: e.net_sales > 0 ? Math.round((100 * e.value) / e.net_sales) : '–' })}
+            {isSales && e.usual_low != null && <span className="muted"> ({t('normal range {low}–{high}', { low: money(e.usual_low), high: money(e.usual_high) })})</span>}
           </div>
-          {e.same_day > 0 && <div className="muted small">{t('{n} other outlets were also low that day — possibly a common cause.', { n: e.same_day })}</div>}
-          <div className="muted small">{e.method === 'chronos2' ? t('Expected by the AI model') : t('Expected from the weekday average')} · {t(STATUS[e.status])}</div>
+          {isSales && e.same_day > 0 && <div className="muted small">{t('{n} other outlets were also low that day — possibly a common cause.', { n: e.same_day })}</div>}
+          <div className="muted small">
+            {isSales ? (e.method === 'chronos2' ? t('Expected by the AI model') : t('Expected from the weekday average')) : t("Compared with the outlet's last 28 days")}
+            {e.impact > 0 && ` · ${t('{rm} at stake', { rm: money(e.impact) })}`} · {t(STATUS[e.status])}
+          </div>
         </div>
-        <Spark sales={sales} day={e.business_date} expected={e.expected} />
+        <Spark series={series} day={e.business_date} level={level} label={t(e.kind === 'discount_spike' ? 'Discount %, last 28 days' : e.kind === 'void_spike' ? 'Voids, last 28 days' : 'Sales, last 28 days')} />
       </div>
       {e.note && <pre className="exc-note small">{e.note}</pre>}
       <div className="exc-actions">
@@ -263,22 +290,23 @@ function ExceptionCard({ e, o, sales, onAct }) {
   );
 }
 
-// The outlet's last 28 days up to the flagged day; the flagged day in red, the expected level dashed
-function Spark({ sales, day, expected }) {
-  const pts = sales.filter((s) => s.business_date <= day).slice(-28);
+// The outlet's last 28 days up to the flagged day (sales, discount % or voids); the flagged day in red, the
+// expected / usual level dashed. series: [{ d, v }] in date order
+function Spark({ series, day, level, label }) {
+  const pts = series.filter((p) => p.d <= day).slice(-28);
   if (pts.length < 3) return null;
   const W = 180;
   const H = 48;
-  const max = Math.max(...pts.map((p) => Number(p.net)), Number(expected) || 0, 1);
+  const max = Math.max(...pts.map((p) => p.v), Number(level) || 0, 1);
   const x = (i) => (i / (pts.length - 1)) * (W - 6) + 3;
   const y = (v) => H - 3 - (Number(v) / max) * (H - 6);
-  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.net).toFixed(1)}`).join(' ');
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
   const last = pts[pts.length - 1];
   return (
-    <svg className="spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('Sales, last 28 days')}>
-      {expected > 0 && <line x1="0" x2={W} y1={y(expected)} y2={y(expected)} className="spark-exp" />}
+    <svg className="spark" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+      {level > 0 && <line x1="0" x2={W} y1={y(level)} y2={y(level)} className="spark-exp" />}
       <path d={line} className="spark-line" />
-      {last.business_date === day && <circle cx={x(pts.length - 1)} cy={y(last.net)} r="3.5" className="spark-dot" />}
+      {last.d === day && <circle cx={x(pts.length - 1)} cy={y(last.v)} r="3.5" className="spark-dot" />}
     </svg>
   );
 }

@@ -4,8 +4,9 @@ import { readWorkbook } from './importers.js';
 import { importSales, detectAll, notify, linkName, deleteSales, localDate } from './data.js';
 import { t } from './i18n.js';
 
-// Operations: drop the Sales Summary Listing export(s) here. Read in the browser (src/importers.js); the rows go to the
-// Worker, then the uploaded days are checked (Chronos-2) and the new exceptions are pushed.
+// Operations: drop the Sales Summary Listing exports here — Sales (Status = Active) and Voids (Status = Voided +
+// Cancelled), told apart by the report's own "Filters:" line. Read in the browser (src/importers.js); the rows go to the
+// Worker (sales first), then the uploaded days are checked and one ranked summary of the new exceptions is pushed.
 export default function Upload({ outlets, onImported }) {
   const [files, setFiles] = useState([]); // { name, result, error, done }
   const [busy, setBusy] = useState(false);
@@ -19,7 +20,9 @@ export default function Upload({ outlets, onImported }) {
       list.map(async (file) => {
         try {
           const w = readWorkbook(await readXlsxFile(file));
-          return w.error ? { name: file.name, error: t('Not a Sales Summary Listing — skipped.') } : { name: file.name, result: w.result };
+          if (w.error) return { name: file.name, error: t('Not a Sales Summary Listing — skipped.') };
+          if (w.result.kind === 'mixed') return { name: file.name, error: t('This export mixes bill statuses, so sales and voids can\'t be told apart. Export it again with Status ticked: Active only (sales), or Voided + Cancelled only (voids).') };
+          return { name: file.name, result: w.result };
         } catch (err) {
           return { name: file.name, error: t("Couldn't read this file: {error}", { error: err.message }) };
         }
@@ -30,29 +33,30 @@ export default function Upload({ outlets, onImported }) {
 
   const upload = async () => {
     setBusy(true);
-    const out = [];
+    const out = [...files];
     const days = new Set();
-    for (const f of files) {
-      if (f.error || f.done) {
-        out.push(f);
-        continue;
-      }
+    // sales before voids (a void spike is judged against that day's sales)
+    const order = out.map((_, i) => i).sort((a, b) => (out[a].result?.kind === 'voids') - (out[b].result?.kind === 'voids'));
+    for (const i of order) {
+      const f = out[i];
+      if (f.error || f.done) continue;
       try {
         setProgress(t('Uploading {name}…', { name: f.name }));
-        const r = await importSales({ file_name: f.name, date_from: f.result.from, date_to: f.result.to, rows: f.result.rows });
+        const r = await importSales({ kind: f.result.kind, file_name: f.name, date_from: f.result.from, date_to: f.result.to, rows: f.result.rows });
         r.detect_days.forEach((d) => days.add(d));
-        out.push({ ...f, done: r });
+        out[i] = { ...f, done: r };
       } catch (err) {
-        out.push({ ...f, error: t('Upload failed: {error}', { error: err.message }) });
+        out[i] = { ...f, error: t('Upload failed: {error}', { error: err.message }) };
       }
-      setFiles([...out, ...files.slice(out.length)]);
+      setFiles([...out]);
     }
     let msg = t('Upload finished.');
     if (days.size) {
       try {
         const list = [...days].sort().reverse();
         const r = await detectAll(list, (done, total) => setProgress(t('Checking sales… {done}/{total} days (the first check can take a minute)', { done, total })));
-        msg = `${msg} ${t('{days} days checked: {n} exceptions.', { days: list.length, n: r.flagged })}`;
+        msg = `${msg} ${t('{days} days checked: {n} exceptions ({sales} sales, {discounts} discount, {voids} void).', { days: list.length, n: r.flagged, sales: r.sales, discounts: r.discounts, voids: r.voids })}`;
+        if (!r.voids_checked) msg = `${msg} ${t('Voids were not checked — no Voids export covers these days.')}`;
         if (r.method === 'baseline') msg = `${msg} ${t('The AI model could not be reached, so the weekday average was used ({error}).', { error: r.model_error || '' })}`;
         setProgress(t('Sending alerts…'));
         const n = await notify();
@@ -75,7 +79,7 @@ export default function Upload({ outlets, onImported }) {
         <h2>{t('Upload Sales Summary')}</h2>
         <span className="muted small">{t('Operations only · re-uploading the same days is safe')}</span>
       </div>
-      <p className="muted small">{t('Every morning, export the Sales Summary Listing for yesterday (or the last few days) and drop it below. Business Date, all outlets.')}</p>
+      <p className="muted small">{t('Every morning, export the Sales Summary Listing for yesterday (or the last few days) twice and drop both files below: one with Status = Active (sales), one with Status = Voided + Cancelled (voids). Business Date, all outlets.')}</p>
 
       <label
         className={`dropzone ${dragging ? 'is-dragging' : ''} ${busy ? 'is-busy' : ''}`}
@@ -94,6 +98,7 @@ export default function Upload({ outlets, onImported }) {
             <li key={`${f.name}-${i}`} className={f.error ? 'is-error' : f.done ? 'is-done' : ''}>
               <div className="upload-head">
                 <strong>{f.name}</strong>
+                {f.result?.kind && f.result.kind !== 'mixed' && <span className={`kind-tag kind-${f.result.kind}`}>{f.result.kind === 'voids' ? t('Voids') : t('Sales')}</span>}
                 {f.result?.from && <span className="muted small"> · {f.result.from === f.result.to ? f.result.from : `${f.result.from} – ${f.result.to}`}</span>}
                 {!f.done && !busy && <button type="button" className="link-btn small" onClick={() => setFiles((p) => p.filter((_, j) => j !== i))} aria-label={t('Remove')}>✕</button>}
               </div>
@@ -183,7 +188,7 @@ function DeleteSales({ disabled, onDeleted }) {
       const r = await deleteSales(from, to);
       setSure(false);
       setOpen(false);
-      await onDeleted(t('Deleted {sales} outlet-days of sales ({from} – {to}) and {exceptions} open exceptions. Upload the right file to fill these days again.', r));
+      await onDeleted(t('Deleted {sales} outlet-days of sales, {voids} of voids ({from} – {to}) and {exceptions} open exceptions. Upload the right files to fill these days again.', r));
     } catch (e) {
       setErr(e.message);
     } finally {

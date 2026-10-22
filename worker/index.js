@@ -6,7 +6,7 @@
 //
 //   GET  /api/health
 //   GET  /api/data?days=35         outlets, exceptions, daily sales for the signed-in person's outlets
-//   POST /api/import               the uploaded rows (operations)                      -> detect_days
+//   POST /api/import {kind}        the uploaded rows: sales (Status Active) or voids (Voided + Cancelled) -> detect_days
 //   POST /api/detect {days}        find exceptions on those days (max 7 per call; operations)
 //   POST /api/notify               push the new exceptions to operations + area managers (operations)
 //   POST /api/alias {name, outlet_id}   link (or, outlet_id null, ignore) a report outlet name that didn't match (operations)

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseSalesSummary, readWorkbook, ymd } from '../src/importers.js';
+import { parseSalesSummary, readWorkbook, ymd, exportKind } from '../src/importers.js';
 
 const rows = [
   ['Sales Summary Listing', null, null],
@@ -34,4 +34,12 @@ test('other reports are not taken for a Sales Summary', () => {
   assert.deepEqual(readWorkbook([{ sheet: 'x', data: [['Sales Details Listing'], [null, null, 'Item', 'Net Sales']] }]), { error: 'unknown' });
   assert.equal(readWorkbook([{ sheet: 'Sheet1', data: rows }]).result.rows.length, 3);
   assert.equal(ymd('30/9/2026'), '2026-09-30');
+});
+
+test('which export: sales, voids, or mixed (refused)', () => {
+  assert.equal(exportKind('Filters: ((Business Date from 1/9/2026 to 30/9/2026) or Status equal to Active or Status equal to Returned)'), 'sales');
+  assert.equal(exportKind('Filters: (Business Date greater than or equal to 1/3/2026 or Status equal to Active)'), 'sales');
+  assert.equal(exportKind('Filters: (Business Date greater than or equal to 1/3/2026 or Status equal to Voided or Status equal to Cancelled)'), 'voids');
+  assert.equal(exportKind('Filters: ((((Business Date greater than or equal to 1/3/2026 or Status equal to Active or Status equal to Voided) or Status equal to Cancelled) or Status equal to Non-sale) or Status equal to Returned)'), 'mixed');
+  assert.equal(exportKind('Filters: (Business Date greater than or equal to 1/3/2026)'), 'mixed');
 });

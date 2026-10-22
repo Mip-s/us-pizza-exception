@@ -3,7 +3,7 @@
 //   { file_name, date_from, date_to, rows: [{ name: "001-US Pizza Kelana Jaya", date: "2026-09-01", gross, discount,
 //     net, bills, guests }] }
 // Each report outlet name is linked to a hub outlet by NAME (rules.resolver; the report's codes are not the hub's).
-// MFM, franchises and anything the hub doesn't monitor are skipped. Re-uploading a day replaces it.
+// MFM, franchises, names operations chose to ignore and anything the hub doesn't monitor are skipped. Re-uploading a day replaces it.
 // -> { batch_id, rows, outlets, unmatched, skipped, detect_days }  (the board then calls /api/detect for detect_days)
 
 import { sb, sbPublic } from './supabase.js';
@@ -47,7 +47,7 @@ export async function handleImport(body, user, env) {
       unmatched.add(r.name);
       continue;
     }
-    if (!monitored.has(hit.outlet_id)) {
+    if (hit.ignored || !monitored.has(hit.outlet_id)) {
       skipped.add(r.name);
       continue;
     }
@@ -87,10 +87,12 @@ export async function handleImport(body, user, env) {
   };
 }
 
-// POST /api/alias { name, outlet_id } — operations link a report name that didn't match to the right outlet
+// POST /api/alias { name, outlet_id } — operations link a report name that didn't match to the right outlet;
+// outlet_id null = ignore that name from now on (HQ kiosk, closed outlet, …)
 export async function handleAlias(body, env) {
   const key = nameKey(body?.name);
-  if (!key || !/^[0-9a-f-]{36}$/.test(String(body?.outlet_id || ''))) throw new HttpError(400, 'name and outlet_id needed');
-  await sb(env).upsert('outlet_aliases', [{ name_key: key, outlet_id: body.outlet_id }], 'name_key');
-  return { name_key: key };
+  const outletId = body?.outlet_id ?? null;
+  if (!key || (outletId !== null && !/^[0-9a-f-]{36}$/.test(String(outletId)))) throw new HttpError(400, 'name and outlet_id needed');
+  await sb(env).upsert('outlet_aliases', [{ name_key: key, outlet_id: outletId }], 'name_key');
+  return { name_key: key, ignored: outletId === null };
 }

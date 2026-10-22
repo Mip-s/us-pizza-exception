@@ -31,6 +31,8 @@ test('matching by name, not by the report code (report 002 = Kota Warisan, hub 0
   assert.deepEqual(r('015-US Pizza Batu Pahat'), { outlet_id: 'bp', learnt: true }); // exact beats "contains"
   assert.deepEqual(r('051-US Pizza  Central I-City'), { outlet_id: 'icity', learnt: true }); // unique "contains"
   assert.equal(r('052-US Pizza Rawang'), null);
+  const ig = resolver(outlets, { hqkiosk: null });
+  assert.deepEqual(ig('HQA-US Pizza HQ Kiosk'), { ignored: true }); // ignored on the board
 });
 
 test('weekday baseline: outlet level x weekday pattern', () => {

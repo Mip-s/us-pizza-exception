@@ -121,15 +121,17 @@ export default function Upload({ outlets, onImported }) {
   );
 }
 
-// Outlet names in the report that match no hub outlet: link each once, then upload the file again
+// Outlet names in the report that match no hub outlet: link each once (or ignore it for good), then upload again
+const IGNORE = '__ignore';
 function Unmatched({ names, outlets }) {
   const [picked, setPicked] = useState({});
   const [saved, setSaved] = useState({});
   const [err, setErr] = useState('');
   const save = async (name) => {
     try {
-      await linkName(name, picked[name]);
-      setSaved((s) => ({ ...s, [name]: true }));
+      const ignore = picked[name] === IGNORE;
+      await linkName(name, ignore ? null : picked[name]);
+      setSaved((s) => ({ ...s, [name]: ignore ? 'ignored' : 'linked' }));
       setErr('');
     } catch (e) {
       setErr(e.message);
@@ -137,16 +139,17 @@ function Unmatched({ names, outlets }) {
   };
   return (
     <div className="unmatched small">
-      <div className="late-text">{t('These names in the report match no outlet. Link them, then upload the file again:')}</div>
+      <div className="late-text">{t('These names in the report match no outlet. Link or ignore them, then upload the file again:')}</div>
       {names.map((n) => (
         <div key={n} className="unmatched-row">
           <span>{n}</span>
           {saved[n] ? (
-            <span className="ok-text">{t('Linked ✓')}</span>
+            <span className={saved[n] === 'ignored' ? 'muted' : 'ok-text'}>{saved[n] === 'ignored' ? t('Ignored ✓') : t('Linked ✓')}</span>
           ) : (
             <>
               <select value={picked[n] || ''} onChange={(e) => setPicked((p) => ({ ...p, [n]: e.target.value }))}>
                 <option value="">{t('Choose outlet…')}</option>
+                <option value={IGNORE}>{t("Ignore — don't check this name")}</option>
                 {outlets.map((o) => <option key={o.outlet_id} value={o.outlet_id}>{o.code} {o.name}</option>)}
               </select>
               <button type="button" className="link-btn" disabled={!picked[n]} onClick={() => save(n)}>{t('Link')}</button>

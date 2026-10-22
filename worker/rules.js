@@ -27,8 +27,8 @@ export const nameKey = (s) =>
 
 export const isMfm = (s) => /^\s*\w+M-|manhattan/i.test(String(s || ''));
 
-// report name -> { outlet_id, learnt } | null. aliases: { name_key: outlet_id }; outlets: [{ outlet_id, name }]
-// 1) a saved alias, 2) the same name, 3) one outlet whose name contains it (or the other way round) — only if unique
+// report name -> { outlet_id, learnt } | { ignored: true } | null. aliases: { name_key: outlet_id | null (= ignored) };
+// outlets: [{ outlet_id, name }]. 1) a saved alias (or ignore), 2) the same name, 3) one outlet whose name contains it (or the other way round) — only if unique
 export function resolver(outlets, aliases) {
   const exact = {};
   for (const o of outlets) exact[nameKey(o.name)] ??= o.outlet_id;
@@ -36,7 +36,7 @@ export function resolver(outlets, aliases) {
   return (reportName) => {
     const k = nameKey(reportName);
     if (!k) return null;
-    if (aliases[k]) return { outlet_id: aliases[k], learnt: false };
+    if (Object.hasOwn(aliases, k)) return aliases[k] ? { outlet_id: aliases[k], learnt: false } : { ignored: true };
     if (exact[k]) return { outlet_id: exact[k], learnt: true };
     const hits = [...new Set(keys.filter((x) => k.length >= 4 && (x.includes(k) || k.includes(x))).map((x) => exact[x]))];
     return hits.length === 1 ? { outlet_id: hits[0], learnt: true } : null;

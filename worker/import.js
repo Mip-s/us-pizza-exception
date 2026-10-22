@@ -87,6 +87,19 @@ export async function handleImport(body, user, env) {
   };
 }
 
+// POST /api/delete { from, to } — operations remove uploaded sales for a date range (e.g. a wrong export), and the
+// open exceptions on those days (they were judged from that data). Acknowledged / resolved ones keep their notes.
+// Upload the right file afterwards to fill the days again.
+export async function handleDelete(body, env) {
+  const { from, to } = body || {};
+  if (!isDate(from) || !isDate(to) || from > to) throw new HttpError(400, 'choose a date range');
+  const db = sb(env);
+  const range = `business_date=gte.${from}&business_date=lte.${to}`;
+  const sales = await db.delCount(`daily_sales?${range}`);
+  const exceptions = await db.delCount(`exceptions?status=eq.open&${range}`);
+  return { from, to, sales, exceptions };
+}
+
 // POST /api/alias { name, outlet_id } — operations link a report name that didn't match to the right outlet;
 // outlet_id null = ignore that name from now on (HQ kiosk, closed outlet, …)
 export async function handleAlias(body, env) {

@@ -9,7 +9,8 @@
 //   POST /api/import               the uploaded rows (operations)                      -> detect_days
 //   POST /api/detect {days}        find exceptions on those days (max 7 per call; operations)
 //   POST /api/notify               push the new exceptions to operations + area managers (operations)
-//   POST /api/alias {name, outlet_id}   link a report outlet name that didn't match (operations)
+//   POST /api/alias {name, outlet_id}   link (or, outlet_id null, ignore) a report outlet name that didn't match (operations)
+//   POST /api/delete {from, to}    remove uploaded sales + open exceptions for those days (operations)
 //   POST /api/exceptions/:id {status, note}   acknowledge / resolve / reopen
 //   everything else                the board (./dist)
 //
@@ -17,7 +18,7 @@
 
 import { who, json } from './auth.js';
 import { handleData, handleUpdate } from './api.js';
-import { handleImport, handleAlias, HttpError } from './import.js';
+import { handleImport, handleAlias, handleDelete, HttpError } from './import.js';
 import { runDetect } from './detect.js';
 import { runNotify } from './notify.js';
 
@@ -40,7 +41,7 @@ export default {
       if (m && request.method === 'POST') return await handleUpdate(request, env, w, m[1]);
 
       if (request.method !== 'POST') return json({ error: 'not found' }, 404);
-      const opsOnly = ['/api/import', '/api/detect', '/api/notify', '/api/alias'];
+      const opsOnly = ['/api/import', '/api/detect', '/api/notify', '/api/alias', '/api/delete'];
       if (opsOnly.includes(pathname) && !w.isOps) return json({ error: 'operations team only' }, 403);
       const body = await request.json().catch(() => ({}));
       if (pathname === '/api/import') return json({ ok: true, ...(await handleImport(body, w.user, env)) });
@@ -55,6 +56,11 @@ export default {
         return json({ ok: true, ...r });
       }
       if (pathname === '/api/alias') return json({ ok: true, ...(await handleAlias(body, env)) });
+      if (pathname === '/api/delete') {
+        const r = await handleDelete(body, env);
+        console.log('delete:', JSON.stringify(r));
+        return json({ ok: true, ...r });
+      }
       return json({ error: 'not found' }, 404);
     } catch (err) {
       if (err instanceof HttpError) return json({ error: err.message }, err.status);

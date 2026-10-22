@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import readXlsxFile from 'read-excel-file/browser';
 import { readWorkbook } from './importers.js';
-import { importSales, detectAll, notify, linkName } from './data.js';
+import { importSales, detectAll, notify, linkName, deleteSales, localDate } from './data.js';
 import { t } from './i18n.js';
 
 // Operations: drop the Sales Summary Listing export(s) here. Read in the browser (src/importers.js); the rows go to the
@@ -117,6 +117,8 @@ export default function Upload({ outlets, onImported }) {
           {busy ? t('Working…') : t('Upload and check')}
         </button>
       )}
+
+      <DeleteSales disabled={busy} onDeleted={onImported} />
     </section>
   );
 }
@@ -158,6 +160,63 @@ function Unmatched({ names, outlets }) {
         </div>
       ))}
       {err && <div className="error small">{err}</div>}
+    </div>
+  );
+}
+
+// Operations: remove uploaded sales for some days (a wrong export), then upload the right file again.
+// Two steps (no browser dialog): "Delete…" shows how many days, then "Yes, delete".
+function DeleteSales({ disabled, onDeleted }) {
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState(localDate());
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const valid = from && to && from <= to;
+  const days = valid ? Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1 : 0;
+
+  const run = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const r = await deleteSales(from, to);
+      setSure(false);
+      setOpen(false);
+      await onDeleted(t('Deleted {sales} outlet-days of sales ({from} – {to}) and {exceptions} open exceptions. Upload the right file to fill these days again.', r));
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <p className="small delete-sales-toggle">
+        <button type="button" className="link-btn small" disabled={disabled} onClick={() => setOpen(true)}>{t('Delete uploaded sales…')}</button>
+      </p>
+    );
+  }
+  return (
+    <div className="delete-sales small">
+      <strong>{t('Delete uploaded sales')}</strong>
+      <p className="muted">{t('Removes the sales of every outlet on these days, and the open exceptions found on them (ones marked looking into / resolved keep their notes). Use it when a wrong export was uploaded.')}</p>
+      <div className="delete-sales-row">
+        <label>{t('From')} <input type="date" value={from} max={to || undefined} onChange={(e) => { setFrom(e.target.value); setSure(false); }} /></label>
+        <label>{t('To')} <input type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value); setSure(false); }} /></label>
+      </div>
+      <div className="delete-sales-row">
+        {!sure ? (
+          <button type="button" className="btn" disabled={!valid || busy || disabled} onClick={() => setSure(true)}>{t('Delete…')}</button>
+        ) : (
+          <button type="button" className="btn btn-danger" disabled={busy || disabled} onClick={run}>
+            {busy ? t('Working…') : t('Yes, delete {n} days', { n: days })}
+          </button>
+        )}
+        <button type="button" className="link-btn" disabled={busy} onClick={() => { setOpen(false); setSure(false); setErr(''); }}>{t('Cancel')}</button>
+      </div>
+      {err && <div className="error">{err}</div>}
     </div>
   );
 }

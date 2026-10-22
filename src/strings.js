@@ -1,6 +1,15 @@
 // Exception Agent screen translations. Key = the English text in the code (t('...')); missing entries fall back to
 // English. Placeholders like {n} must stay as they are. (Push wording: worker/messages.js.)
 const ms = {
+  "Delete uploaded sales…": "Padam jualan dimuat naik…",
+  "Delete uploaded sales": "Padam jualan dimuat naik",
+  "Removes the sales of every outlet on these days, and the open exceptions found on them (ones marked looking into / resolved keep their notes). Use it when a wrong export was uploaded.": "Membuang jualan semua outlet pada hari-hari ini, serta pengecualian terbuka pada hari tersebut (yang sedang disemak / selesai kekal dengan nota). Gunakan jika eksport yang salah telah dimuat naik.",
+  "From": "Dari",
+  "To": "Hingga",
+  "Delete…": "Padam…",
+  "Yes, delete {n} days": "Ya, padam {n} hari",
+  "Cancel": "Batal",
+  "Deleted {sales} outlet-days of sales ({from} – {to}) and {exceptions} open exceptions. Upload the right file to fill these days again.": "{sales} hari-outlet jualan ({from} – {to}) dan {exceptions} pengecualian terbuka dipadam. Muat naik fail yang betul untuk mengisi hari-hari ini semula.",
   "1 outlet": "1 cawangan",
   "1 outlet flagged": "1 outlet ditanda",
   "A new version of the Exception Agent is available.": "Versi baharu Exception Agent tersedia.",
@@ -97,6 +106,15 @@ const ms = {
   "← Operations Hub": "← Hab Operasi",
 };
 const zh = {
+  "Delete uploaded sales…": "删除已上传的销售…",
+  "Delete uploaded sales": "删除已上传的销售",
+  "Removes the sales of every outlet on these days, and the open exceptions found on them (ones marked looking into / resolved keep their notes). Use it when a wrong export was uploaded.": "删除这些日期所有分店的销售，以及在这些日期发现的未处理异常（标记为跟进中 / 已解决的保留备注）。在上传了错误的导出文件时使用。",
+  "From": "从",
+  "To": "至",
+  "Delete…": "删除…",
+  "Yes, delete {n} days": "确定，删除 {n} 天",
+  "Cancel": "取消",
+  "Deleted {sales} outlet-days of sales ({from} – {to}) and {exceptions} open exceptions. Upload the right file to fill these days again.": "已删除 {sales} 个分店日的销售（{from} – {to}）及 {exceptions} 个未处理异常。请上传正确的文件以重新填补这些日期。",
   "1 outlet": "1 家分店",
   "1 outlet flagged": "1 家分店被标记",
   "A new version of the Exception Agent is available.": "Exception Agent 有新版本。",
@@ -193,6 +211,15 @@ const zh = {
   "← Operations Hub": "← 运营中心",
 };
 const my = {
+  "Delete uploaded sales…": "တင်ထားသော အရောင်းကို ဖျက်ရန်…",
+  "Delete uploaded sales": "တင်ထားသော အရောင်းကို ဖျက်ရန်",
+  "Removes the sales of every outlet on these days, and the open exceptions found on them (ones marked looking into / resolved keep their notes). Use it when a wrong export was uploaded.": "ဤရက်များရှိ ဆိုင်ခွဲအားလုံး၏ အရောင်းနှင့် ထိုရက်များတွင် တွေ့ထားသော ဖွင့်ထားသည့် ချွင်းချက်များကို ဖယ်ရှားသည် (စစ်ဆေးနေ / ဖြေရှင်းပြီး အမှတ်အသားရှိသည်များ မှတ်ချက်များ ကျန်ရှိမည်)။ မှားသော ဖိုင်တင်မိသည့်အခါ အသုံးပြုပါ။",
+  "From": "မှ",
+  "To": "အထိ",
+  "Delete…": "ဖျက်ရန်…",
+  "Yes, delete {n} days": "ဟုတ်ကဲ့၊ {n} ရက် ဖျက်ပါ",
+  "Cancel": "မလုပ်တော့ပါ",
+  "Deleted {sales} outlet-days of sales ({from} – {to}) and {exceptions} open exceptions. Upload the right file to fill these days again.": "အရောင်း ဆိုင်ခွဲ-ရက် {sales} ခု ({from} – {to}) နှင့် ဖွင့်ထားသော ချွင်းချက် {exceptions} ခုကို ဖျက်ပြီး။ ဤရက်များကို ပြန်ဖြည့်ရန် မှန်ကန်သော ဖိုင်ကို တင်ပါ။",
   "1 outlet": "ဆိုင်ခွဲ 1 ခု",
   "1 outlet flagged": "ဆိုင်ခွဲ ၁ ခု အမှတ်အသားပြု",
   "A new version of the Exception Agent is available.": "Exception Agent ဗားရှင်းအသစ် ရနိုင်ပါပြီ။",

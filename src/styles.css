@@ -289,3 +289,12 @@ html, body { overscroll-behavior-y: contain; }
 .unmatched { margin-top: 8px; display: grid; gap: 6px; }
 .unmatched-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .unmatched-row select { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; max-width: 100%; }
+
+/* delete uploaded sales (operations) */
+.delete-sales-toggle { margin: 10px 0 0; }
+.delete-sales { margin-top: 14px; border: 1px solid #f3c1bc; background: #fdf6f5; border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.delete-sales p { margin: 0; }
+.delete-sales-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.delete-sales-row input[type="date"] { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.btn-danger { background: #c62828; color: #fff; border-color: #c62828; }
+.btn-danger:hover:not(:disabled) { background: #a61f1f; border-color: #a61f1f; color: #fff; }

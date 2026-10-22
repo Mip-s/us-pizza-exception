@@ -41,6 +41,12 @@ export function sb(env, { schema = 'exception_agent' } = {}) {
       }),
     patch: (path, body) => call('PATCH', path, body, { Prefer: 'return=minimal' }),
     del: (path) => call('DELETE', path, undefined, { Prefer: 'return=minimal' }),
+    // delete and return how many rows were removed (PostgREST Content-Range: */N)
+    async delCount(path) {
+      const res = await fetch(`${base}/${path}`, { method: 'DELETE', headers: headers({ Prefer: 'return=minimal,count=exact' }) });
+      if (!res.ok) throw new Error(`Supabase DELETE ${path.split('?')[0]}: ${res.status} ${await res.text()}`);
+      return Number((res.headers.get('Content-Range') || '').split('/')[1]) || 0;
+    },
   };
 }
 

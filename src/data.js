@@ -25,6 +25,7 @@ export const importSales = (payload) => call('import', payload);
 export const updateException = (id, status, note) => call(`exceptions/${id}`, { status, note });
 export const linkName = (name, outletId) => call('alias', { name, outlet_id: outletId });
 export const notify = () => call('notify', {});
+export const deleteSales = (from, to) => call('delete', { from, to });
 
 // Check the uploaded days, 7 at a time (one Worker call each; the first may wait ~1 min while the model wakes up).
 // onProgress(done, total) -> totals

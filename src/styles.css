@@ -1,4 +1,4 @@
-/* GRN & Stock Chaser — same look as the Operations hub, Review Watcher and Maintenance Tracker */
+/* Exception Agent — same look as the Operations hub and the other modules */
 :root {
   --ink: #14203f; --muted: #6b7690; --line: #e3e7f0; --surface: #fff; --bg: #f5f6fa;
   --accent: #c8102e; --blue: #1f3a93; --blue-light: #ebeffb;
@@ -347,3 +347,45 @@ html, body { overscroll-behavior-y: contain; }
 .promo-list li.is-live { border-color: #9fb3e6; }
 .promo-src { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 7px; background: var(--blue-light); color: var(--blue); }
 .promo-src.promo-competitor { background: #fdecea; color: #b3261e; }
+
+/* 23/10: header = back link + refresh + account button on one row, then the title (AccountMenu.jsx, same as the hub) */
+.top { display: grid; gap: 10px; margin-bottom: 20px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.top-row .back { margin-bottom: 0; }
+.top-tools { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.icon-tool { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 auto; color: #65738a; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; cursor: pointer; font: inherit; font-size: 18px; box-shadow: 0 8px 24px #203a6410; }
+.icon-tool:hover:not(:disabled) { border-color: #aebbe6; color: var(--blue); }
+.icon-tool:disabled { cursor: default; opacity: .65; }
+.icon-tool:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.account { position: relative; min-width: 0; }
+.account-button { display: flex; align-items: center; gap: 10px; max-width: 100%; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 5px 10px 5px 5px; box-shadow: 0 8px 24px #203a6410; }
+.account-button:hover { border-color: #aebbe6; }
+.account-button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.account-button .user-text { max-width: 220px; }
+.user-avatar { position: relative; }
+.avatar-dot { position: absolute; right: -3px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; }
+.avatar-dot.is-on { background: #2caf82; }
+.account-chevron { color: var(--muted); font-size: 12px; }
+.account-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 950; width: 290px; max-width: calc(100vw - 32px); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 18px 44px #14203f2e; padding: 8px; display: grid; gap: 2px; }
+.menu-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); min-width: 0; }
+.menu-head .user-text { flex: 1 1 auto; }
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 10px; }
+.menu-label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.menu-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.menu-dot.is-on { background: #2caf82; }
+.menu-action { font: inherit; font-size: 12px; font-weight: 700; color: #65738a; background: #f1f4fa; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+.menu-action.is-primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+.menu-action.is-primary:hover:not(:disabled) { background: #9c0d24; }
+.menu-action:disabled { opacity: .6; cursor: default; }
+.menu-row .lang-select { margin-left: 0; max-width: 150px; }
+.menu-item { display: block; width: 100%; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink); text-align: left; text-decoration: none;
+  background: none; border: 0; border-radius: 10px; padding: 10px; cursor: pointer; }
+.menu-item:hover, .menu-item:focus-visible { background: #f1f4fa; outline: none; }
+.menu-item.is-danger { color: #bd3446; border-top: 1px solid var(--line); border-radius: 0 0 10px 10px; margin-top: 4px; padding-top: 12px; }
+.menu-item.is-danger:hover { background: #fff0f1; }
+@media (max-width: 560px) {
+  .account-button .user-text { display: none; } /* phones: avatar + chevron only; name is at the top of the menu */
+  .account-menu { width: calc(100vw - 32px); max-width: none; }
+}

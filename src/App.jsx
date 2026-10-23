@@ -3,11 +3,11 @@ import { PagedSection } from './Paged.jsx';
 import { supabase, HUB_URL, signOutHere } from './supabase.js';
 import { usePush, useUpdateCheck, usePullToRefresh, PULL_THRESHOLD } from './hooks.js';
 import { loadAll, updateException, ROLES } from './data.js';
-import LangSelect from './LangSelect.jsx';
+import AccountMenu from './AccountMenu.jsx';
 import Upload from './Upload.jsx';
 import Trends from './Trends.jsx';
 import Promotions from './Promotions.jsx';
-import { t, useLang, locale, syncLangFromProfile, LANGUAGE_NAMES } from './i18n.js';
+import { t, useLang, locale, syncLangFromProfile } from './i18n.js';
 
 const REFRESH_MS = 2 * 60 * 1000;
 const IN_HUB = window.location.pathname.startsWith('/exception');
@@ -150,33 +150,25 @@ export default function App() {
       </div>
 
       <header className="top">
-        <div>
+        <div className="top-row">
           <a className="back" href={hubHome}>{t('← Operations Hub')}</a>
+          <div className="top-tools">
+            <button type="button" className="icon-tool" onClick={handleRefresh} disabled={refreshing} title={t('Refresh')} aria-label={t('Refresh')}>
+              <span className={`refresh-icon ${refreshing ? 'spinning' : ''}`} aria-hidden="true">⟳</span>
+            </button>
+            <AccountMenu
+              name={name}
+              detail={data ? `${ROLE[role] ? t(ROLE[role]) : role} · ${data.outlets.length === 1 ? t('1 outlet') : t('{n} outlets', { n: data.outlets.length })}` : t('Signed in')}
+              push={push}
+              hubHome={hubHome}
+              onSignOut={signOutHere}
+            />
+          </div>
+        </div>
+        <div>
           <div className="eyebrow">{t('Exception Agent')}</div>
           <h1>{t('Daily exceptions')}</h1>
           <p className="muted">{t("Each outlet against its own normal: sales far below what an AI model (Chronos-2) expected, discounts or voids far above its usual. Ranked by RM at stake and sent to the area manager and HOD after each upload.")}</p>
-        </div>
-        <div className="toolbar">
-          <button type="button" className="tool" onClick={handleRefresh} disabled={refreshing}>
-            <span className={`refresh-icon ${refreshing ? 'spinning' : ''}`} aria-hidden="true">⟳</span>
-            {refreshing ? t('Refreshing…') : t('Refresh')}
-          </button>
-          {(push.supported || push.needsIosInstall) && !push.subscribed && (
-            <button type="button" className="tool push-toggle" onClick={push.enable} disabled={push.busy}
-              title={push.needsIosInstall ? t('Add to Home Screen first (iOS requirement)') : push.error || undefined}>
-              <span className="push-dot" aria-hidden="true" />
-              {push.busy ? t('Working…') : push.needsIosInstall ? t('Enable alerts (install first)') : t('Enable alerts')}
-            </button>
-          )}
-          <div className="user-badge">
-            <div className="user-avatar" aria-hidden="true">{(name || '?').charAt(0).toUpperCase()}</div>
-            <div className="user-text">
-              <strong>{name}</strong>
-              <small>{data ? `${ROLE[role] ? t(ROLE[role]) : role} · ${data.outlets.length === 1 ? t('1 outlet') : t('{n} outlets', { n: data.outlets.length })} · ${LANGUAGE_NAMES[data.profile?.preferred_language] || 'English'}` : t('Signed in')}</small>
-            </div>
-            <LangSelect />
-            <button type="button" className="logout-button" onClick={signOutHere}>{t('Sign out')}</button>
-          </div>
         </div>
       </header>
 

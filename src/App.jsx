@@ -3,7 +3,7 @@ import { PagedSection } from './Paged.jsx';
 import { supabase, HUB_URL, signOutHere } from './supabase.js';
 import { usePush, useUpdateCheck, usePullToRefresh, PULL_THRESHOLD } from './hooks.js';
 import { loadAll, updateException, ROLES } from './data.js';
-import AccountMenu from './AccountMenu.jsx';
+import AccountMenu, { BackLink } from './AccountMenu.jsx';
 import Upload from './Upload.jsx';
 import Trends from './Trends.jsx';
 import Promotions from './Promotions.jsx';
@@ -151,11 +151,12 @@ export default function App() {
 
       <header className="top">
         <div className="top-row">
-          <a className="back" href={hubHome}>{t('← Operations Hub')}</a>
+          <BackLink hubHome={hubHome} />
           <div className="top-tools">
             <button type="button" className="icon-tool" onClick={handleRefresh} disabled={refreshing} title={t('Refresh')} aria-label={t('Refresh')}>
               <span className={`refresh-icon ${refreshing ? 'spinning' : ''}`} aria-hidden="true">⟳</span>
             </button>
+            <span className="ops-bell-slot" />
             <AccountMenu
               name={name}
               detail={data ? `${ROLE[role] ? t(ROLE[role]) : role} · ${data.outlets.length === 1 ? t('1 outlet') : t('{n} outlets', { n: data.outlets.length })}` : t('Signed in')}

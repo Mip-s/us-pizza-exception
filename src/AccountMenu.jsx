@@ -93,3 +93,25 @@ export default function AccountMenu({ name, detail, push, hubHome, onSignOut }) 
     </div>
   );
 }
+
+// 23/10: "← Back", same as the hub's notification centre: back to the previous page when it was one of ours,
+// otherwise to the hub home (opened from a push, a bookmark or another site).
+export function BackLink({ hubHome }) {
+  const back = (e) => {
+    let ours = false;
+    try {
+      ours = !!document.referrer && new URL(document.referrer).origin === window.location.origin;
+    } catch {
+      /* no referrer */
+    }
+    if (ours && window.history.length > 1) {
+      e.preventDefault();
+      window.history.back();
+    }
+  };
+  return (
+    <a className="back" href={hubHome} onClick={back}>
+      {t('← Back')}
+    </a>
+  );
+}

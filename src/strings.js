@@ -202,6 +202,7 @@ const ms = {
   "← Prev": "← Sebelum",
   "Page {p} of {n}": "Halaman {p} / {n}",
   "Next →": "Seterusnya →",
+  "← Back": "← Kembali",
 };
 const zh = {
   "US Pizza promotions (and big competitor ones) that change sales or discounts.": "会影响销售或折扣的 US Pizza 促销（以及大型竞争对手促销）。",
@@ -405,6 +406,7 @@ const zh = {
   "← Prev": "← 上一页",
   "Page {p} of {n}": "第 {p} / {n} 页",
   "Next →": "下一页 →",
+  "← Back": "← 返回",
 };
 const my = {
   "US Pizza promotions (and big competitor ones) that change sales or discounts.": "ရောင်းအား သို့မဟုတ် လျှော့စျေးကို ပြောင်းစေသော US Pizza ပရိုမိုးရှင်းများ (နှင့် ပြိုင်ဘက်၏ ကြီးမားသော ပရိုမိုးရှင်းများ)။",
@@ -608,6 +610,7 @@ const my = {
   "← Prev": "← ယခင်",
   "Page {p} of {n}": "စာမျက်နှာ {p} / {n}",
   "Next →": "နောက်သို့ →",
+  "← Back": "← နောက်သို့",
 };
 const STRINGS = { ms, zh, my };
 export default STRINGS;

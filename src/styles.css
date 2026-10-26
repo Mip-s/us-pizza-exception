@@ -389,3 +389,8 @@ html, body { overscroll-behavior-y: contain; }
   .account-button .user-text { display: none; } /* phones: avatar + chevron only; name is at the top of the menu */
   .account-menu { width: calc(100vw - 32px); max-width: none; }
 }
+
+/* 26/10: "← Back" looks like the hub's notification centre button (.notif-back) */
+.back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; color: var(--blue); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px #203a640d; }
+.back-btn:hover { border-color: #aebbe6; }
+.back-btn:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }

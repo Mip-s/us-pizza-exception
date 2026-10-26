@@ -110,7 +110,7 @@ export function BackLink({ hubHome }) {
     }
   };
   return (
-    <a className="back" href={hubHome} onClick={back}>
+    <a className="back-btn" href={hubHome} onClick={back}>
       {t('← Back')}
     </a>
   );

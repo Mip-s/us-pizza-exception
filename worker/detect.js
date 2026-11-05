@@ -14,7 +14,7 @@
 
 import { sb } from './supabase.js';
 import {
-  addDays, judge, judgeDiscount, judgeVoids, weekdayBaseline, todayMYT,
+  addDays, dayCovered, judge, judgeDiscount, judgeVoids, weekdayBaseline, todayMYT,
   HISTORY_DAYS, BASELINE_MIN_DAYS, NOTIFY_RECENT_DAYS, DETECT_PER_CALL, TRAIL_DAYS,
 } from './rules.js';
 
@@ -83,7 +83,9 @@ export async function runDetect(env, days, now = Date.now()) {
   const checkedDays = new Set();
   for (const day of days) {
     const sold = onDay[day] || {};
-    if (Object.keys(sold).length < 5) continue; // this day isn't really in the uploaded data
+    // this day isn't really in the uploaded data (too few outlets, or far fewer than usually sell): not judged
+    const recent = outlets.filter((o) => byOutlet[o].some((r) => r.business_date < day && r.business_date >= addDays(day, -7))).length;
+    if (!dayCovered(Object.values(sold).filter((r) => r.net > 0).length, recent)) continue;
     checkedDays.add(day);
     const voidsToday = voidCovered(day);
     const salesFlags = [];

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nameKey, isMfm, resolver, weekdayBaseline, judge, detectDays, addDays, judgeDiscount, judgeVoids } from '../worker/rules.js';
+import { nameKey, isMfm, resolver, weekdayBaseline, judge, detectDays, addDays, judgeDiscount, judgeVoids, dayCovered } from '../worker/rules.js';
 import { summary } from '../worker/messages.js';
 
 const outlets = [
@@ -101,4 +101,11 @@ test('void spike: well above the outlet\'s usual voids, at least RM200 and 10% o
   assert.equal(r.value, 400);
   assert.equal(r.usual, 0);
   assert.equal(judgeVoids(400, Array(14).fill(150), 2500), null); // this outlet usually voids ~RM150: 400 is < 3x
+});
+
+test('a partial export does not count as a covered day', () => {
+  assert.equal(dayCovered(55, 59), true);   // normal day
+  assert.equal(dayCovered(42, 59), true);   // 71%: a few closed
+  assert.equal(dayCovered(20, 59), false);  // only some regions uploaded: not judged (else 39 false "no sales")
+  assert.equal(dayCovered(4, 4), false);    // under the minimum
 });

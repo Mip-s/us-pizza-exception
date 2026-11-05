@@ -7,6 +7,8 @@ export const BASELINE_MIN_DAYS = 7; // fewer than this -> not judged at all
 export const HISTORY_DAYS = 90; // history sent to the model
 export const MAX_GAP_DAYS = 14; // last sale older than this before the day -> weekday baseline
 export const NOTIFY_RECENT_DAYS = 3; // exceptions older than this (back-filling a month) are listed, not pushed
+export const COVER_MIN_OUTLETS = 5; // a day with fewer outlets than this isn't really in the uploaded data
+export const COVER_SHARE = 0.7; // ... nor one where fewer than 70% of the outlets that sold in the 7 days before are in it
 export const DETECT_PER_CALL = 7; // days checked per /api/detect request (one Modal call each; Worker request cap)
 
 // Discount and void spikes: each outlet against its own last TRAIL_DAYS days (median + robust spread).
@@ -104,6 +106,10 @@ export function judgeVoids(voids, hist, sales) {
   if (!(Number(sales) > 0) || v / Number(sales) < VOID_SHARE) return null;
   return { kind: 'void_spike', value: Math.round(v), usual: Math.round(median), impact: Math.round(v - median) };
 }
+
+// Is this business day really covered by the upload? sold = outlets with sales that day, recent = outlets that sold in the
+// 7 days before. A partial export (some regions, a cut-off file) must not make every other outlet a "no sales".
+export const dayCovered = (sold, recent) => sold >= COVER_MIN_OUTLETS && sold >= COVER_SHARE * recent;
 
 // Decide one outlet-day. sale: { net, bills } | null (no row that day); exp: { expected, low, high, method } | null
 export function judge(sale, exp) {

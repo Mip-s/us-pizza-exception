@@ -57,6 +57,7 @@ export default function Upload({ outlets, onImported }) {
         const r = await detectAll(list, (done, total) => setProgress(t('Checking sales… {done}/{total} days (the first check can take a minute)', { done, total })));
         msg = `${msg} ${t('{days} days checked: {n} exceptions ({sales} sales, {discounts} discount, {voids} void).', { days: list.length, n: r.flagged, sales: r.sales, discounts: r.discounts, voids: r.voids })}`;
         if (!r.voids_checked) msg = `${msg} ${t('Voids were not checked — no Voids export covers these days.')}`;
+        if (r.partial_days.length) msg = `${msg} ${t('Some days look like a partial export (many outlets that sold last week are missing), so outlets without a row were not flagged as no sales: {days}. Upload the full file to check them.', { days: r.partial_days.sort().join(', ') })}`;
         if (r.method === 'baseline') msg = `${msg} ${t('The AI model could not be reached, so the weekday average was used ({error}).', { error: r.model_error || '' })}`;
         setProgress(t('Sending alerts…'));
         const n = await notify();

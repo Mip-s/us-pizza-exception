@@ -14,7 +14,7 @@
 
 import { sb } from './supabase.js';
 import {
-  addDays, judge, judgeDiscount, judgeVoids, weekdayBaseline, todayMYT,
+  addDays, dayComplete, judge, judgeDiscount, judgeVoids, weekdayBaseline, todayMYT,
   HISTORY_DAYS, BASELINE_MIN_DAYS, NOTIFY_RECENT_DAYS, DETECT_PER_CALL, TRAIL_DAYS,
 } from './rules.js';
 
@@ -81,10 +81,16 @@ export async function runDetect(env, days, now = Date.now()) {
   const flags = [];
   let checked = 0;
   const checkedDays = new Set();
+  const partialDays = [];
   for (const day of days) {
     const sold = onDay[day] || {};
     if (Object.keys(sold).length < 5) continue; // this day isn't really in the uploaded data
     checkedDays.add(day);
+    // a partial file (most outlets that sold last week have no row): outlets WITHOUT a row are not judged, so a
+    // 5-outlet export can't push "no sales" for the rest. Outlets with a row are still checked.
+    const active = outlets.filter((o) => byOutlet[o].some((r) => r.business_date < day && r.business_date >= addDays(day, -7)));
+    const complete = dayComplete(Object.keys(sold), active);
+    if (!complete) partialDays.push(day);
     const voidsToday = voidCovered(day);
     const salesFlags = [];
     for (const o of outlets) {
@@ -92,7 +98,7 @@ export async function runDetect(env, days, now = Date.now()) {
       const sale = sold[o] ? { net: sold[o].net, bills: sold[o].bills } : null;
 
       // sales below expected / missing
-      if (before.length >= BASELINE_MIN_DAYS && (sale || before.some((r) => r.business_date >= addDays(day, -7)))) {
+      if (before.length >= BASELINE_MIN_DAYS && (sale || (complete && before.some((r) => r.business_date >= addDays(day, -7))))) {
         const a = aiBy[`${o}|${day}`];
         const exp = a
           ? { expected: a.p50, low: a.p10, high: a.p90, method: 'chronos2' }
@@ -133,6 +139,7 @@ export async function runDetect(env, days, now = Date.now()) {
   const keep = new Set(flags.map((f) => `${f.outlet_id}|${f.business_date}|${f.kind}`));
   const stale = existing.filter((e) => e.status === 'open' && checkedDays.has(e.business_date)
     && (e.kind !== 'void_spike' || voidCovered(e.business_date))
+    && (e.kind !== 'no_sales' || !partialDays.includes(e.business_date))
     && !keep.has(`${e.outlet_id}|${e.business_date}|${e.kind}`));
   if (stale.length) await db.del(`exceptions?id=in.(${stale.map((e) => e.id).join(',')})`);
   // back-filled days (older than NOTIFY_RECENT_DAYS) are listed on the board but never pushed
@@ -142,7 +149,7 @@ export async function runDetect(env, days, now = Date.now()) {
   }
   const count = (k) => flags.filter((f) => f.kind === k).length;
   return {
-    days, checked, flagged: flags.length, removed: stale.length,
+    days, partial_days: partialDays, checked, flagged: flags.length, removed: stale.length,
     sales: count('sales_drop') + count('no_sales'), discounts: count('discount_spike'), voids: count('void_spike'),
     voids_checked: days.filter((d) => checkedDays.has(d) && voidCovered(d)).length,
     method: ai.error ? 'baseline' : 'chronos2', ...(ai.error ? { model_error: ai.error } : {}),

@@ -34,7 +34,7 @@ export const deletePromotion = (id) => call(`promotions/${id}/delete`, {});
 // Check the uploaded days, 7 at a time (one Worker call each; the first may wait ~1 min while the model wakes up).
 // onProgress(done, total) -> totals
 export async function detectAll(days, onProgress = () => {}) {
-  const total = { checked: 0, flagged: 0, removed: 0, sales: 0, discounts: 0, voids: 0, voids_checked: 0, method: 'chronos2', model_error: null };
+  const total = { checked: 0, flagged: 0, removed: 0, sales: 0, discounts: 0, voids: 0, voids_checked: 0, partial_days: [], method: 'chronos2', model_error: null };
   for (let i = 0; i < days.length; i += 7) {
     onProgress(i, days.length);
     const r = await call('detect', { days: days.slice(i, i + 7) });
@@ -42,6 +42,7 @@ export async function detectAll(days, onProgress = () => {}) {
     total.flagged += r.flagged || 0;
     total.removed += r.removed || 0;
     for (const k of ['sales', 'discounts', 'voids', 'voids_checked']) total[k] += r[k] || 0;
+    total.partial_days.push(...(r.partial_days || []));
     if (r.method === 'baseline') total.method = 'baseline';
     if (r.model_error) total.model_error = r.model_error;
   }

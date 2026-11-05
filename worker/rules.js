@@ -20,6 +20,7 @@ export const VOID_MULT = 3; // voids at least 3x the outlet's usual day
 export const VOID_Z = 5; //   ... and 5 robust spreads above it
 export const VOID_MIN_RM = 200; // ... and at least RM200 voided
 export const VOID_SHARE = 0.10; // ... and at least 10% of that day's sales
+export const MIN_COVERAGE = 0.6; // a day is only complete when at least this share of the outlets that sold in the week before have a row
 export const CRIT_RM = 500; // RM at stake from which an exception shows red
 const DAY = 86400e3;
 
@@ -119,4 +120,13 @@ export function judge(sale, exp) {
 export function detectDays(dates, today, maxAgeDays = 35) {
   const from = addDays(today, -maxAgeDays);
   return [...new Set(dates)].filter((d) => d >= from && d < today).sort().reverse();
+}
+
+// Is the day's file complete? A partial export (say 5 outlets) must not make every other outlet "no sales".
+// soldIds: outlets with a row that day; activeIds: outlets that sold in the 7 days before. Too few active outlets to
+// judge the share (new data set) -> treated as complete, like before.
+export function dayComplete(soldIds, activeIds) {
+  if (activeIds.length < 5) return true;
+  const sold = new Set(soldIds);
+  return activeIds.filter((o) => sold.has(o)).length / activeIds.length >= MIN_COVERAGE;
 }

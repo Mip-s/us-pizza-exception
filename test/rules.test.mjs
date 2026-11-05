@@ -102,3 +102,12 @@ test('void spike: well above the outlet\'s usual voids, at least RM200 and 10% o
   assert.equal(r.usual, 0);
   assert.equal(judgeVoids(400, Array(14).fill(150), 2500), null); // this outlet usually voids ~RM150: 400 is < 3x
 });
+
+test('partial export: a day with only a few of last week\'s outlets is not complete', async () => {
+  const { dayComplete } = await import('../worker/rules.js');
+  const active = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+  assert.equal(dayComplete(['a', 'b', 'c', 'd', 'e'], active), false); // 5 of 10
+  assert.equal(dayComplete(['a', 'b', 'c', 'd', 'e', 'f'], active), true); // 6 of 10 (one or two closed is normal)
+  assert.equal(dayComplete(['a', 'b'], ['a', 'b', 'c']), true); // too few active outlets to judge
+  assert.equal(dayComplete(['x', 'y', 'z'], active), false); // rows for outlets that were not active don't count
+});

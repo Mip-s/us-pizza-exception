@@ -1,6 +1,11 @@
 // Exception Agent screen translations. Key = the English text in the code (t('...')); missing entries fall back to
 // English. Placeholders like {n} must stay as they are. (Push wording: worker/messages.js.)
 const ms = {
+  // 6/11: missing-days warning for sales uploads
+  "Upload anyway": "Muat naik juga",
+  "⚠ Missing days since the last sales upload": "⚠ Hari tiada sejak muat naik jualan terakhir",
+  "The sales already uploaded go up to {last}. These {count} days are not in the file(s) you are about to upload: {days}.": "Jualan yang sudah dimuat naik sehingga {last}. {count} hari ini tiada dalam fail yang anda akan muat naik: {days}.",
+  "Those days stay empty, and no exceptions are found for them, until a file covering them is uploaded. Export the Sales Summary Listing again with an earlier Business Date from, or upload anyway.": "Hari-hari itu kekal kosong dan tiada pengecualian ditemui untuknya sehingga fail yang meliputinya dimuat naik. Eksport semula Sales Summary Listing dengan Business Date from yang lebih awal, atau muat naik juga.",
   "US Pizza promotions (and big competitor ones) that change sales or discounts.": "Promosi US Pizza (dan promosi besar pesaing) yang mengubah jualan atau diskaun.",
   "Promotion added.": "Promosi ditambah.",
   "Promotion removed.": "Promosi dibuang.",
@@ -192,6 +197,11 @@ const ms = {
   "← Back": "← Kembali",
 };
 const zh = {
+  // 6/11: missing-days warning for sales uploads
+  "Upload anyway": "仍然上传",
+  "⚠ Missing days since the last sales upload": "⚠ 自上次销售上传以来缺少的日期",
+  "The sales already uploaded go up to {last}. These {count} days are not in the file(s) you are about to upload: {days}.": "已上传的销售数据截至 {last}。你即将上传的文件中没有这 {count} 天：{days}。",
+  "Those days stay empty, and no exceptions are found for them, until a file covering them is uploaded. Export the Sales Summary Listing again with an earlier Business Date from, or upload anyway.": "这些日期会保持空白，也不会检测异常，直到上传包含它们的文件。请用更早的 Business Date from 重新导出 Sales Summary Listing，或仍然上传。",
   "US Pizza promotions (and big competitor ones) that change sales or discounts.": "会影响销售或折扣的 US Pizza 促销（以及大型竞争对手促销）。",
   "Promotion added.": "已添加促销。",
   "Promotion removed.": "已删除促销。",
@@ -383,6 +393,11 @@ const zh = {
   "← Back": "← 返回",
 };
 const my = {
+  // 6/11: missing-days warning for sales uploads
+  "Upload anyway": "ဆက်တင်မည်",
+  "⚠ Missing days since the last sales upload": "⚠ နောက်ဆုံး ရောင်းအားတင်ပြီးကတည်းက ပျက်ကွက်သော ရက်များ",
+  "The sales already uploaded go up to {last}. These {count} days are not in the file(s) you are about to upload: {days}.": "တင်ပြီးသော ရောင်းအားသည် {last} အထိဖြစ်သည်။ ယခုတင်မည့်ဖိုင်များတွင် ဤရက် {count} ရက် မပါပါ- {days}။",
+  "Those days stay empty, and no exceptions are found for them, until a file covering them is uploaded. Export the Sales Summary Listing again with an earlier Business Date from, or upload anyway.": "ထိုရက်များအတွက် ဖုံးလွှမ်းသောဖိုင် မတင်မချင်း ကွက်လပ်ဖြစ်နေပြီး ချွင်းချက်များ မတွေ့ရှိနိုင်ပါ။ Business Date from ပိုစောသော Sales Summary Listing ကို ပြန်ထုတ်ပါ၊ သို့မဟုတ် ဆက်တင်ပါ။",
   "US Pizza promotions (and big competitor ones) that change sales or discounts.": "ရောင်းအား သို့မဟုတ် လျှော့စျေးကို ပြောင်းစေသော US Pizza ပရိုမိုးရှင်းများ (နှင့် ပြိုင်ဘက်၏ ကြီးမားသော ပရိုမိုးရှင်းများ)။",
   "Promotion added.": "ပရိုမိုးရှင်း ထည့်ပြီး။",
   "Promotion removed.": "ပရိုမိုးရှင်း ဖယ်ပြီး။",

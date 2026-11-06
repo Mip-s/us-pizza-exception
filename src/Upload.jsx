@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import readXlsxFile from 'read-excel-file/browser';
 import { readWorkbook } from './importers.js';
-import { importSales, detectAll, notify, linkName, deleteSales, localDate } from './data.js';
+import { importSales, detectAll, notify, linkName, deleteSales, localDate, lastSalesDate } from './data.js';
+import { missingRanges, totalMissing, formatRanges } from './gaps.js';
 import { t } from './i18n.js';
 
 // Operations: drop the Sales Summary Listing exports here — Sales (Status = Active) and Voids (Status = Voided +
@@ -12,6 +13,7 @@ export default function Upload({ outlets, onImported }) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [gap, setGap] = useState(null); // { last, ranges } while the missing-days warning is open
 
   const add = async (list) => {
     list = list.filter((f) => /\.xlsx$/i.test(f.name));
@@ -31,7 +33,28 @@ export default function Upload({ outlets, onImported }) {
     setFiles((prev) => [...prev.filter((f) => !f.done), ...read]);
   };
 
+  // Before uploading sales: do the files cover every business day since the last uploaded one? If not, warn and let
+  // operations decide (the days in between would stay empty until a file covering them is uploaded).
+  const checkGap = async () => {
+    setBusy(true);
+    try {
+      const last = await lastSalesDate();
+      const sales = files.filter((f) => f.result?.kind === 'sales' && !f.error && !f.done).map((f) => f.result);
+      const ranges = missingRanges(sales, last, localDate());
+      if (ranges.length) {
+        setGap({ last, ranges });
+        setBusy(false);
+        return;
+      }
+    } catch (err) {
+      console.error('upload gap check failed:', err.message); // never block an upload because the check failed
+    }
+    setBusy(false);
+    upload();
+  };
+
   const upload = async () => {
+    setGap(null);
     setBusy(true);
     const out = [...files];
     const days = new Set();
@@ -119,9 +142,27 @@ export default function Upload({ outlets, onImported }) {
 
       {progress && <p className="muted small" role="status">{progress}</p>}
       {ready && (
-        <button type="button" className="btn btn-primary" onClick={upload} disabled={busy}>
+        <button type="button" className="btn btn-primary" onClick={checkGap} disabled={busy}>
           {busy ? t('Working…') : t('Upload and check')}
         </button>
+      )}
+
+      {gap && (
+        <div className="modal-backdrop" role="presentation">
+          <div className="modal" role="alertdialog" aria-modal="true" aria-labelledby="gap-title">
+            <h3 id="gap-title">{t('⚠ Missing days since the last sales upload')}</h3>
+            <p className="small">
+              {t('The sales already uploaded go up to {last}. These {count} days are not in the file(s) you are about to upload: {days}.', {
+                last: gap.last, count: totalMissing(gap.ranges), days: formatRanges(gap.ranges),
+              })}
+            </p>
+            <p className="muted small">{t('Those days stay empty, and no exceptions are found for them, until a file covering them is uploaded. Export the Sales Summary Listing again with an earlier Business Date from, or upload anyway.')}</p>
+            <div className="danger-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setGap(null)} autoFocus>{t('Cancel')}</button>
+              <button type="button" className="btn" onClick={upload}>{t('Upload anyway')}</button>
+            </div>
+          </div>
+        </div>
       )}
 
       <DeleteSales disabled={busy} onDeleted={onImported} />

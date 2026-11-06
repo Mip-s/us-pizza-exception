@@ -78,3 +78,9 @@ export async function handleOutlet(request, env, who) {
     exceptions,
   });
 }
+
+// GET /api/last-sales (operations) -> the last business day any sales upload covered, for the missing-days warning
+export async function handleLastSales(env) {
+  const [row] = await sb(env).get('import_batches?select=date_to,imported_at&kind=eq.sales&order=date_to.desc.nullslast&limit=1');
+  return json({ last_sales_date: row?.date_to || null, imported_at: row?.imported_at || null });
+}

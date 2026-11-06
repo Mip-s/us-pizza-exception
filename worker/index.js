@@ -6,6 +6,7 @@
 //
 //   GET  /api/health
 //   GET  /api/data?days=35         outlets, exceptions, daily sales for the signed-in person's outlets
+//   GET  /api/last-sales           last business day uploaded (operations) — for the missing-days warning
 //   GET  /api/outlet?id=&days=90   one outlet's daily sales / discounts / voids for the trends graph
 //   POST /api/import {kind}        the uploaded rows: sales (Status Active) or voids (Voided + Cancelled) -> detect_days
 //   POST /api/detect {days}        find exceptions on those days (max 7 per call; operations)
@@ -19,7 +20,7 @@
 // Secrets: SUPABASE_SERVICE_ROLE_KEY, VAPID_PRIVATE_KEY, EXCEPTION_API_KEY (= the Modal secret exception-api-key)
 
 import { who, json } from './auth.js';
-import { handleData, handleUpdate, handleOutlet } from './api.js';
+import { handleData, handleUpdate, handleOutlet, handleLastSales } from './api.js';
 import { handleImport, handleAlias, handleDelete, HttpError } from './import.js';
 import { runDetect } from './detect.js';
 import { runNotify } from './notify.js';
@@ -41,6 +42,7 @@ export default {
       if (w instanceof Response) return w;
       if (pathname === '/api/data' && request.method === 'GET') return await handleData(request, env, w);
       if (pathname === '/api/outlet' && request.method === 'GET') return await handleOutlet(request, env, w);
+      if (pathname === '/api/last-sales' && request.method === 'GET') return w.isOps ? await handleLastSales(env) : json({ error: 'operations team only' }, 403);
       const m = pathname.match(/^\/api\/exceptions\/(\d+)$/);
       if (m && request.method === 'POST') return await handleUpdate(request, env, w, m[1]);
 

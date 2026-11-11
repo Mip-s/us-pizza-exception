@@ -29,8 +29,6 @@ export const updateException = (id, status, note) => call(`exceptions/${id}`, { 
 export const linkName = (name, outletId) => call('alias', { name, outlet_id: outletId });
 export const notify = () => call('notify', {});
 export const deleteSales = (from, to) => call('delete', { from, to });
-export const addPromotion = (p) => call('promotions', p);
-export const deletePromotion = (id) => call(`promotions/${id}/delete`, {});
 
 
 // Check the uploaded days, 7 at a time (one Worker call each; the first may wait ~1 min while the model wakes up).

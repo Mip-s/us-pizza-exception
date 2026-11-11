@@ -6,7 +6,6 @@ import { loadAll, updateException, ROLES } from './data.js';
 import AccountMenu, { BackLink } from './AccountMenu.jsx';
 import Upload from './Upload.jsx';
 import Trends from './Trends.jsx';
-import Promotions from './Promotions.jsx';
 import { t, useLang, locale, syncLangFromProfile } from './i18n.js';
 
 const REFRESH_MS = 2 * 60 * 1000;
@@ -227,8 +226,6 @@ export default function App() {
           </PagedSection>
 
           <Trends outlets={data.outlets} outletId={trendId} onPick={setTrendOutlet} />
-
-          <Promotions promotions={data.promotions || []} regions={regions} isOps={data.is_ops} onChanged={async (msg) => { setFlash(msg); await load(); }} />
 
           {data.is_ops && <Upload outlets={data.outlets} onImported={async (msg) => { setFlash(msg); await load(); }} />}
 
